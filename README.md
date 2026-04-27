@@ -7,6 +7,7 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `addons/`: módulos Odoo (código Python/XML).
 - `qweb/`: templates QWeb + scripts de sincronización/aplicación (si aplica).
 - `tools/`: utilidades de despliegue, validación, migración.
+  - `tools/nak-ventas/`: flujo NAK (cotizaciones `draft`) → traslado interno en Nakel SA `CEN/Existencias` → `CEN/Roturas 2` (script + doc cron desecho).
 - `docs/`: runbooks y documentación operativa.
 
 ## Módulos (prioridad 1 / instalados en `master_dev`)
