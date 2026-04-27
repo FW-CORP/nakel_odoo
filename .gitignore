@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Odoo / artifacts
+*.log
+*.zip
+*.tar.gz
+*.pdf
+*.xlsx
+*.csv
+**/out/
+**/reportes/
+**/backups/
+
+# Secrets / local config
+.env
+.env.*
+config_nakel.py
+config_*.py
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
