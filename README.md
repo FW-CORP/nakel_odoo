@@ -31,6 +31,11 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `tools/arca-retenciones/` (SICORE / SIRCAR / PERCEIIBB + exportador Excel)
   - Se excluyen outputs (`out/`) y artefactos binarios para mantener el repo liviano.
 
+## Fixes productivos (rollout)
+
+- `tools/fix-facom/` (**Arreglo FACOM** en facturas de compra)
+  - Ver `tools/fix-facom/RUNBOOK_PRODUCTIVO.md` (dry-run → batch chico → ejecución completa, con rollback por CSV)
+
 ## Reglas
 
 - **Sin secretos** en git (`.env`, passwords, API keys, dumps).
