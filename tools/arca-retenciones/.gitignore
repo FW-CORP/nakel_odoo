@@ -19,3 +19,9 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Binaries
+*.png
+*.jpg
+*.jpeg
+*.xlsm
