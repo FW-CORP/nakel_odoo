@@ -1,0 +1,21 @@
+# Salidas generadas en cualquier subproyecto
+**/out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Secretos / entorno
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

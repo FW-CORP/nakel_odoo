@@ -26,6 +26,11 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `docs/ventas/` (listas de precios, preventas/inyección, PDV, comisiones, etiquetas, etc.)
   - Se excluyen artefactos generados (`OUT/`, `reportes/`, `.csv/.xlsx`) para mantener el repo liviano y público.
 
+## Herramientas fiscales (ARCA Retenciones)
+
+- `tools/arca-retenciones/` (SICORE / SIRCAR / PERCEIIBB + exportador Excel)
+  - Se excluyen outputs (`out/`) y artefactos binarios para mantener el repo liviano.
+
 ## Reglas
 
 - **Sin secretos** en git (`.env`, passwords, API keys, dumps).
