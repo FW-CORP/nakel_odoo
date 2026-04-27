@@ -2,6 +2,12 @@
 
 Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que suelen cambiar y desplegarse juntas.
 
+## Fuente de verdad
+
+- **Este repositorio (`nakel_odoo`, remoto `FW-CORP/nakel_odoo`)** es la **única fuente de verdad** para lo que vive bajo su árbol (`addons/`, `qweb/`, `tools/`, `docs/`).
+- **No duplicar** el mismo código o runbook en otros árboles con otro historial git (p. ej. vault Obsidian / carpetas hermanas): enlazar o clonar este repo y **trabajar aquí** para PRs, tags y despliegues.
+- Las herramientas bajo `tools/` (incl. `tools/nak-ventas/`) siguen la **estructura y reglas** de este README (sin secretos, artefactos pesados fuera del índice donde corresponda).
+
 ## Estructura
 
 - `addons/`: módulos Odoo (código Python/XML).
