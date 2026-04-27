@@ -16,6 +16,11 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `addons/nakel_wave_picking_link` (`nakel_wave_picking_link`)
 - `addons/modulo_rg5329` (`modulo_rg5329`)
 
+## Documentación de usuarios y permisos
+
+- `docs/usuarios/` (permisos, grupos, estructuras, troubleshooting)
+  - Incluye versión **sanitizada** de credenciales/entornos: `docs/usuarios/documentacion/CREDENCIALES_Y_IDS_POR_BASE.PUBLIC.md`
+
 ## Reglas
 
 - **Sin secretos** en git (`.env`, passwords, API keys, dumps).
