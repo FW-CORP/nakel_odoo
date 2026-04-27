@@ -17,7 +17,7 @@ Si no hay disponible, **no mueve** ese producto (y queda explícito en el report
 
 Archivo:
 
-- `nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py`
+- `nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py`
 
 Requisitos:
 
@@ -28,31 +28,31 @@ Requisitos:
 Dry-run (no crea nada):
 
 ```bash
-python3 nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202
 ```
 
 Varias órdenes:
 
 ```bash
-python3 nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202 --orden S02203
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202 --orden S02203
 ```
 
 O CSV:
 
 ```bash
-python3 nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --ordenes "S02202,S02203,S02204"
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --ordenes "S02202,S02203,S02204"
 ```
 
 Archivo (una orden por línea):
 
 ```bash
-python3 nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --archivo-ordenes /ruta/ordenes.txt
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --archivo-ordenes /ruta/ordenes.txt
 ```
 
 Aplicar (crea **un** `stock.picking` interno por orden, validado):
 
 ```bash
-python3 nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --apply --orden S02202
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --apply --orden S02202
 ```
 
 ## Notas / límites

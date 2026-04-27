@@ -5,9 +5,9 @@ basándose en líneas de pedidos/cotizaciones (sale.order) listados por nombre.
 
 Política: mueve min(pedido, disponible) por producto en CEN/Existencias.
 
-Uso (desde la raíz del vault):
-  python3 nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202
-  python3 nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --apply --orden S02202 --orden S02203
+Uso (desde la raíz del vault nakel):
+  python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202
+  python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --apply --orden S02202 --orden S02203
 
 Requiere config_nakel.py en PYTHONPATH (mismo patrón que otros scripts del vault).
 """

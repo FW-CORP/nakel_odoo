@@ -1,5 +1,7 @@
 # NAK / ventas (Nak + stock en Nakel SA)
 
+Ubicación en el repo: `nakel_odoo/tools/nak-ventas/`.
+
 Material de trabajo para flujos donde la **cotización/pedido** está en compañía **Nak** pero el **stock físico** y los movimientos de almacén se hacen en **Nakel SA** (Central).
 
 ## Contenido
