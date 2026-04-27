@@ -309,8 +309,16 @@ def main() -> int:
             # Algunas bases/configs pueden no exponerlo igual; el validate igual puede pedir cantidades.
             pass
 
-        res = models.execute_kw(db, uid, password, "stock.picking", "button_validate", [[pid_pick]])
-        # En Odoo recientes button_validate puede devolver un wizard dict; si pasa, no asumimos éxito.
+        # Evita wizard stock.backorder.confirmation en traslados internos largos (no crear backorder).
+        res = models.execute_kw(
+            db,
+            uid,
+            password,
+            "stock.picking",
+            "button_validate",
+            [[pid_pick]],
+            {"context": {"skip_backorder": True}},
+        )
         if isinstance(res, dict) and res.get("res_model"):
             raise RuntimeError(
                 f"button_validate devolvió un wizard ({res.get('res_model')}). "
