@@ -21,6 +21,11 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `docs/usuarios/` (permisos, grupos, estructuras, troubleshooting)
   - Incluye versión **sanitizada** de credenciales/entornos: `docs/usuarios/documentacion/CREDENCIALES_Y_IDS_POR_BASE.PUBLIC.md`
 
+## Documentación de ventas
+
+- `docs/ventas/` (listas de precios, preventas/inyección, PDV, comisiones, etiquetas, etc.)
+  - Se excluyen artefactos generados (`OUT/`, `reportes/`, `.csv/.xlsx`) para mantener el repo liviano y público.
+
 ## Reglas
 
 - **Sin secretos** en git (`.env`, passwords, API keys, dumps).
