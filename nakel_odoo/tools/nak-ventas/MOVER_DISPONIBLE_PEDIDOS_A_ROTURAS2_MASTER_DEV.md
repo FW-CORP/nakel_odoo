@@ -19,7 +19,9 @@
 \text{qty\_mover} = \min(\text{pedido},\text{disponible en CEN/Existencias})
 \]
 
-Si no hay disponible, **no mueve** ese producto (y queda explícito en el reporte del dry-run).
+Si en **`CEN/Existencias`** el disponible es **0**, **no se crea línea de movimiento** para ese producto: queda **omitido** (comportamiento esperado; no es error). La cotización en NAK **no se modifica**.
+
+Si hay **menos** stock que lo pedido, se mueve **`min(pedido, disponible)`** (movimiento parcial); el faltante sigue solo en el documento de venta.
 
 ## Script
 
@@ -55,6 +57,12 @@ Archivo (una orden por línea):
 
 ```bash
 python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --archivo-ordenes /ruta/ordenes.txt
+```
+
+Listar productos omitidos por **stock 0** en `CEN/Existencias` (auditoría):
+
+```bash
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02966 --listar-omitidos
 ```
 
 Aplicar (crea **un** `stock.picking` interno por orden, validado):

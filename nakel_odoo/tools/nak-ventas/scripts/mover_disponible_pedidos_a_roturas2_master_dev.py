@@ -192,6 +192,11 @@ def main() -> int:
     p.add_argument("--company-nakel", type=int, default=1, help="Company_id de Nakel SA para el picking interno (default: 1)")
     p.add_argument("--dry-run", action="store_true", help="No crea pickings; solo reporta.")
     p.add_argument("--apply", action="store_true", help="Crea y valida pickings (traslados internos).")
+    p.add_argument(
+        "--listar-omitidos",
+        action="store_true",
+        help="Lista productos de la cotización con pedido>0 pero stock=0 en CEN/Existencias (no se crea movimiento; es esperado).",
+    )
 
     args = p.parse_args()
     if args.dry_run == args.apply:
@@ -253,17 +258,22 @@ def main() -> int:
         moves: List[dict] = []
         moved_lines = 0
         skipped_zero_need = 0
-        skipped_zero_avail = 0
+        sin_stock_en_origen: List[Tuple[int, float, float]] = []  # pid, pedido, disponible
+        movimiento_parcial = 0  # 0 < disp < pedido
 
-        # estable para salida
+        # Por producto: solo se crea línea si hay cantidad > 0 a mover (min(pedido, disp)).
+        # Si disponible en CEN/Existencias es 0, no hay nada que mover → se omite (comportamiento esperado).
         for pid, q_need in sorted(need.items(), key=lambda kv: kv[0]):
             if q_need <= 0:
                 skipped_zero_need += 1
                 continue
             avail = _sum_quant_qty(models, db, uid, password, src_loc, pid)
             qty = min(q_need, avail)
+            if avail <= 0 and q_need > 0:
+                sin_stock_en_origen.append((pid, q_need, avail))
+            elif 0 < avail < q_need:
+                movimiento_parcial += 1
             if qty <= 0:
-                skipped_zero_avail += 1
                 continue
 
             uom = models.execute_kw(db, uid, password, "product.product", "read", [[pid]], {"fields": ["uom_id"]})[0]["uom_id"]
@@ -280,9 +290,29 @@ def main() -> int:
             )
             moved_lines += 1
 
-        print("Líneas a mover (productos con qty>0):", moved_lines)
-        print("Saltados por pedido<=0:", skipped_zero_need)
-        print("Saltados por disponible<=0:", skipped_zero_avail)
+        print("Líneas de movimiento a crear (producto con cantidad > 0 a mover):", moved_lines)
+        print("Líneas de cotización con pedido<=0 (omitidas):", skipped_zero_need)
+        print(
+            "Productos con pedido>0 pero stock=0 en CEN/Existencias (no se mueve nada; dado por hecho):",
+            len(sin_stock_en_origen),
+        )
+        if movimiento_parcial:
+            print(
+                "Productos con movimiento parcial (se mueve min(pedido, disp), queda faltante en cotización):",
+                movimiento_parcial,
+            )
+        if args.listar_omitidos and sin_stock_en_origen:
+            pids = [t[0] for t in sin_stock_en_origen]
+            names = {}
+            for part in _chunked(pids, 200):
+                prods = models.execute_kw(db, uid, password, "product.product", "read", [part], {"fields": ["display_name"]})
+                for pr in prods:
+                    names[pr["id"]] = pr.get("display_name") or str(pr["id"])
+            print("  Detalle (sin stock en origen):")
+            for pid, q_need, avail in sin_stock_en_origen[:80]:
+                print(f"    - [{pid}] {names.get(pid, '?')!s} | pedido={q_need} disp={avail}")
+            if len(sin_stock_en_origen) > 80:
+                print(f"    ... y {len(sin_stock_en_origen) - 80} más")
 
         if args.dry_run:
             continue
