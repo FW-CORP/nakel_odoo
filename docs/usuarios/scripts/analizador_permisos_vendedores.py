@@ -12,6 +12,7 @@ Autor: Corolla AI Assistant
 Fecha: 2025-09-08
 """
 
+import os
 import xmlrpc.client
 import ssl
 import logging
@@ -34,10 +35,14 @@ class AnalizadorPermisosVendedores:
         try:
             self.logger.info("🔌 CONECTANDO A MASTER_15...")
             
-            url = "https://nakel.net.ar"
-            database = "master_15"
-            username = "odoo@nakel.ar"
-            password = "REDACTED"
+            url = os.environ.get("ODOO_URL", "https://nakel.net.ar").strip()
+            database = os.environ.get("ODOO_DB", "master_15").strip()
+            username = os.environ.get("ODOO_USERNAME", "odoo@nakel.ar").strip()
+            password = os.environ.get("ODOO_PASSWORD", "").strip()
+            if not password:
+                raise RuntimeError(
+                    "Falta ODOO_PASSWORD en el entorno. No hardcodear credenciales."
+                )
             
             # Contexto SSL
             ssl_context = ssl.create_default_context()
@@ -68,7 +73,7 @@ class AnalizadorPermisosVendedores:
             
             # Obtener usuarios que tienen contactos asignados
             vendedores = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.users', 'search_read',
                 [[('active', '=', True)], ['id', 'name', 'login', 'email']]
             )
@@ -78,7 +83,7 @@ class AnalizadorPermisosVendedores:
             for vendedor in vendedores:
                 # Contar contactos asignados a este vendedor
                 contactos_asignados = models.execute_kw(
-                    database, uid, 'REDACTED',
+                    database, uid, password,
                     'res.partner', 'search_count',
                     [[('user_id', '=', vendedor['id'])]]
                 )
@@ -110,7 +115,7 @@ class AnalizadorPermisosVendedores:
             
             # Obtener grupo autoservicio_contactos
             grupo = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.groups', 'read',
                 [[97], ['name', 'users']]  # ID 97 es el grupo que creamos
             )
@@ -118,7 +123,7 @@ class AnalizadorPermisosVendedores:
             if grupo:
                 grupo_info = grupo[0]
                 usuarios_grupo = models.execute_kw(
-                    database, uid, 'REDACTED',
+                    database, uid, password,
                     'res.users', 'read',
                     [grupo_info['users'], ['id', 'name', 'login', 'email']]
                 )
@@ -143,7 +148,7 @@ class AnalizadorPermisosVendedores:
             self.logger.info(f"🔍 ANALIZANDO PERMISOS DE {tipo_usuario.upper()}...")
             
             total_contactos = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.partner', 'search_count',
                 [[]]
             )
@@ -153,7 +158,7 @@ class AnalizadorPermisosVendedores:
                 
                 # Contar contactos asignados
                 contactos_asignados = models.execute_kw(
-                    database, uid, 'REDACTED',
+                    database, uid, password,
                     'res.partner', 'search_count',
                     [[('user_id', '=', usuario['id'])]]
                 )
@@ -162,13 +167,13 @@ class AnalizadorPermisosVendedores:
                 
                 # Verificar acceso a contactos específicos
                 contactos_gomez = models.execute_kw(
-                    database, uid, 'REDACTED',
+                    database, uid, password,
                     'res.partner', 'search_count',
                     [[('name', 'ilike', 'GOMEZ JUAN')]]
                 )
                 
                 contactos_caleta = models.execute_kw(
-                    database, uid, 'REDACTED',
+                    database, uid, password,
                     'res.partner', 'search_count',
                     [[('category_id.name', '=', 'Caleta Olivia')]]
                 )
@@ -193,7 +198,7 @@ class AnalizadorPermisosVendedores:
             self.logger.info("📋 VERIFICANDO REGLAS ACTIVAS...")
             
             reglas = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'ir.rule', 'search_read',
                 [[('model_id.model', '=', 'res.partner')], ['id', 'name', 'active', 'domain_force']]
             )

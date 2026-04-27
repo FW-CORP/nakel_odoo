@@ -11,6 +11,7 @@ Autor: Corolla AI Assistant
 Fecha: 2025-09-08
 """
 
+import os
 import xmlrpc.client
 import ssl
 import logging
@@ -33,10 +34,14 @@ class AnalizadorModificadorPermisos:
         try:
             self.logger.info("🔌 CONECTANDO A MASTER_15...")
             
-            url = "https://nakel.net.ar"
-            database = "master_15"
-            username = "odoo@nakel.ar"
-            password = "REDACTED"
+            url = os.environ.get("ODOO_URL", "https://nakel.net.ar").strip()
+            database = os.environ.get("ODOO_DB", "master_15").strip()
+            username = os.environ.get("ODOO_USERNAME", "odoo@nakel.ar").strip()
+            password = os.environ.get("ODOO_PASSWORD", "").strip()
+            if not password:
+                raise RuntimeError(
+                    "Falta ODOO_PASSWORD en el entorno. No hardcodear credenciales."
+                )
             
             # Contexto SSL
             ssl_context = ssl.create_default_context()
@@ -67,7 +72,7 @@ class AnalizadorModificadorPermisos:
             
             # Obtener reglas de registro para res.partner
             reglas = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'ir.rule', 'search_read',
                 [[('model_id.model', '=', 'res.partner')], 
                  ['id', 'name', 'domain_force', 'groups', 'perm_read', 'perm_write', 'perm_create', 'perm_unlink', 'active']]
@@ -108,7 +113,7 @@ class AnalizadorModificadorPermisos:
             
             # Obtener todos los grupos
             grupos = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.groups', 'search_read',
                 [[], ['id', 'name', 'category_id', 'full_name', 'users']],
                 {'limit': 50}
@@ -142,7 +147,7 @@ class AnalizadorModificadorPermisos:
             
             # Obtener usuarios activos
             usuarios = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.users', 'search_read',
                 [[('active', '=', True)], ['id', 'name', 'login', 'email', 'groups_id']]
             )
@@ -207,7 +212,7 @@ class AnalizadorModificadorPermisos:
                     
                     # Desactivar la regla
                     models.execute_kw(
-                        database, uid, 'REDACTED',
+                        database, uid, password,
                         'ir.rule', 'write',
                         [[regla['id']], {'active': False}]
                     )
@@ -228,7 +233,7 @@ class AnalizadorModificadorPermisos:
             
             # Crear grupo
             grupo_id = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.groups', 'create',
                 [{'name': 'Acceso Completo Contactos', 'category_id': 1}]  # category_id 1 es "Extra Rights"
             )
@@ -237,7 +242,7 @@ class AnalizadorModificadorPermisos:
             
             # Obtener usuarios activos
             usuarios = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.users', 'search',
                 [[('active', '=', True)]]
             )
@@ -249,7 +254,7 @@ class AnalizadorModificadorPermisos:
                     try:
                         # Obtener grupos actuales del usuario
                         usuario_grupos = models.execute_kw(
-                            database, uid, 'REDACTED',
+                            database, uid, password,
                             'res.users', 'read',
                             [[usuario_id], ['groups_id']]
                         )
@@ -260,7 +265,7 @@ class AnalizadorModificadorPermisos:
                             
                             # Actualizar usuario
                             models.execute_kw(
-                                database, uid, 'REDACTED',
+                                database, uid, password,
                                 'res.users', 'write',
                                 [[usuario_id], {'groups_id': [(6, 0, grupos_actuales)]}]
                             )
@@ -283,7 +288,7 @@ class AnalizadorModificadorPermisos:
             
             # Contar contactos visibles para el usuario de prueba
             total_contactos = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.partner', 'search_count',
                 [[]]
             )
@@ -292,7 +297,7 @@ class AnalizadorModificadorPermisos:
             
             # Verificar acceso a contactos específicos
             contactos_gomez = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.partner', 'search_count',
                 [[('name', 'ilike', 'GOMEZ JUAN')]]
             )
@@ -301,7 +306,7 @@ class AnalizadorModificadorPermisos:
             
             # Verificar acceso a contactos por categoría
             contactos_caleta = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.partner', 'search_count',
                 [[('category_id.name', '=', 'Caleta Olivia')]]
             )

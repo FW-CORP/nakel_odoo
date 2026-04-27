@@ -11,6 +11,7 @@ Autor: Corolla AI Assistant
 Fecha: 2025-09-08
 """
 
+import os
 import xmlrpc.client
 import ssl
 import logging
@@ -33,10 +34,14 @@ class BuscadorUsuariosContactos:
         try:
             self.logger.info("🔌 CONECTANDO A MASTER_15...")
             
-            url = "https://nakel.net.ar"
-            database = "master_15"
-            username = "odoo@nakel.ar"
-            password = "REDACTED"
+            url = os.environ.get("ODOO_URL", "https://nakel.net.ar").strip()
+            database = os.environ.get("ODOO_DB", "master_15").strip()
+            username = os.environ.get("ODOO_USERNAME", "odoo@nakel.ar").strip()
+            password = os.environ.get("ODOO_PASSWORD", "").strip()
+            if not password:
+                raise RuntimeError(
+                    "Falta ODOO_PASSWORD en el entorno. No hardcodear credenciales."
+                )
             
             # Contexto SSL
             ssl_context = ssl.create_default_context()
@@ -72,7 +77,7 @@ class BuscadorUsuariosContactos:
                 
                 # Buscar por nombre exacto
                 usuarios = models.execute_kw(
-                    database, uid, 'REDACTED',
+                    database, uid, password,
                     'res.users', 'search_read',
                     [[('name', '=', nombre)], ['id', 'name', 'login', 'email', 'active', 'groups_id']]
                 )
@@ -80,7 +85,7 @@ class BuscadorUsuariosContactos:
                 if not usuarios:
                     # Buscar por nombre que contenga
                     usuarios = models.execute_kw(
-                        database, uid, 'REDACTED',
+                        database, uid, password,
                         'res.users', 'search_read',
                         [[('name', 'ilike', nombre)], ['id', 'name', 'login', 'email', 'active', 'groups_id']]
                     )
@@ -88,7 +93,7 @@ class BuscadorUsuariosContactos:
                 if not usuarios:
                     # Buscar por login
                     usuarios = models.execute_kw(
-                        database, uid, 'REDACTED',
+                        database, uid, password,
                         'res.users', 'search_read',
                         [[('login', 'ilike', nombre)], ['id', 'name', 'login', 'email', 'active', 'groups_id']]
                     )
@@ -120,7 +125,7 @@ class BuscadorUsuariosContactos:
                 
                 # Buscar por nombre exacto
                 contactos = models.execute_kw(
-                    database, uid, 'REDACTED',
+                    database, uid, password,
                     'res.partner', 'search_read',
                     [[('name', '=', nombre)], 
                      ['id', 'name', 'email', 'phone', 'city', 'vat', 'category_id', 'user_id', 'active']]
@@ -129,7 +134,7 @@ class BuscadorUsuariosContactos:
                 if not contactos:
                     # Buscar por nombre que contenga
                     contactos = models.execute_kw(
-                        database, uid, 'REDACTED',
+                        database, uid, password,
                         'res.partner', 'search_read',
                         [[('name', 'ilike', nombre)], 
                          ['id', 'name', 'email', 'phone', 'city', 'vat', 'category_id', 'user_id', 'active']]
@@ -162,7 +167,7 @@ class BuscadorUsuariosContactos:
             
             # Obtener todos los usuarios
             usuarios = models.execute_kw(
-                database, uid, 'REDACTED',
+                database, uid, password,
                 'res.users', 'search_read',
                 [[], ['id', 'name', 'login', 'email', 'active']],
                 {'limit': 50}
@@ -196,8 +201,8 @@ class BuscadorUsuariosContactos:
                 self.logger.info(f"   🔍 Analizando categoría: {categoria_nombre}")
                 
                 # Buscar la categoría
-                categoria = models.execute_kw(
-                    database, uid, 'REDACTED',
+            categoria = models.execute_kw(
+                database, uid, password,
                     'res.partner.category', 'search_read',
                     [[('name', '=', categoria_nombre)], ['id', 'name']]
                 )
@@ -207,7 +212,7 @@ class BuscadorUsuariosContactos:
                     
                     # Obtener algunos contactos de esta categoría
                     contactos = models.execute_kw(
-                        database, uid, 'REDACTED',
+                        database, uid, password,
                         'res.partner', 'search_read',
                         [[('category_id', 'in', [categoria_id])], 
                          ['id', 'name', 'email', 'phone', 'city', 'vat', 'user_id']],
