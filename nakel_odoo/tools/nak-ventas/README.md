@@ -2,7 +2,9 @@
 
 Ubicación en el repo: `nakel_odoo/tools/nak-ventas/`.
 
-Material de trabajo para flujos donde la **cotización/pedido** está en compañía **Nak** pero el **stock físico** y los movimientos de almacén se hacen en **Nakel SA** (Central).
+Material de trabajo para flujos donde la **cotización/pedido** está en compañía **Nak** (solo **borradores** / `draft`) pero el **stock físico** y los movimientos de almacén se hacen en **Nakel SA**. **No** usar órdenes de venta de Nakel SA como origen de cantidades.
+
+**Plan A:** script manual (`--dry-run` / `--apply`), sin cron obligatorio.
 
 ## Contenido
 

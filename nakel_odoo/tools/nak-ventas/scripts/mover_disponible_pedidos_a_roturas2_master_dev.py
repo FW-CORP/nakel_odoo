@@ -100,7 +100,21 @@ def _resolve_internal_picking_type(models, db: int, uid: int, password: str, war
     return pts[0]["id"]
 
 
-def _needs_by_orders(models, db: int, uid: int, password: str, order_names: List[str]) -> Dict[str, Dict[int, float]]:
+def _needs_by_orders(
+    models,
+    db: int,
+    uid: int,
+    password: str,
+    order_names: List[str],
+    *,
+    company_nak_id: int,
+    only_draft: bool = True,
+) -> Dict[str, Dict[int, float]]:
+    """
+    Lee líneas de venta solo de cotizaciones NAK: no modifica sale.order.
+    - company_nak_id: compañía Nak (en master_dev suele ser 2; Nakel SA es 1).
+    - only_draft: True = solo state 'draft' (cotización); no tocar ventas confirmadas.
+    """
     per_order: Dict[str, Dict[int, float]] = {}
     for name in order_names:
         sos = models.execute_kw(
@@ -117,7 +131,22 @@ def _needs_by_orders(models, db: int, uid: int, password: str, order_names: List
         if len(sos) > 1:
             raise RuntimeError(f"Hay más de un sale.order con name={name!r} (ambiguo).")
 
-        so_id = sos[0]["id"]
+        so = sos[0]
+        cid = so["company_id"][0] if so.get("company_id") else None
+        st = so.get("state")
+        if cid != company_nak_id:
+            raise RuntimeError(
+                f"Orden {name!r} es de compañía {so.get('company_id')!r}. "
+                f"Solo se aceptan cotizaciones/ventas de NAK (company_id={company_nak_id}). "
+                f"No se procesan pedidos de Nakel SA ni otras compañías."
+            )
+        if only_draft and st != "draft":
+            raise RuntimeError(
+                f"Orden {name!r} no está en borrador (state={st!r}). "
+                f"Solo se procesan cotizaciones (draft) de NAK. Confirmá o cancelá manualmente otra lógica si aplica."
+            )
+
+        so_id = so["id"]
         line_ids = models.execute_kw(
             db,
             uid,
@@ -154,7 +183,13 @@ def main() -> int:
         help="Ruta a un archivo de texto: una orden por línea (se ignoran líneas vacías y #comentarios).",
     )
     p.add_argument("--warehouse-code", default="CEN", help="Código de almacén para resolver picking type internal (default: CEN)")
-    p.add_argument("--company-nakel", type=int, default=1, help="Company_id de Nakel SA (default: 1)")
+    p.add_argument("--company-nak", type=int, default=2, help="Company_id de Nak (cotizaciones a leer; default: 2). No usar Nakel SA aquí.")
+    p.add_argument(
+        "--permitir-venta-confirmada",
+        action="store_true",
+        help="Inseguro: acepta sale.order con state distinto de draft. Por defecto solo borrador (cotización).",
+    )
+    p.add_argument("--company-nakel", type=int, default=1, help="Company_id de Nakel SA para el picking interno (default: 1)")
     p.add_argument("--dry-run", action="store_true", help="No crea pickings; solo reporta.")
     p.add_argument("--apply", action="store_true", help="Crea y valida pickings (traslados internos).")
 
@@ -198,9 +233,16 @@ def main() -> int:
     src_loc, dst_loc = _resolve_locations(models, db, uid, password, company_id)
     picking_type_id = _resolve_internal_picking_type(models, db, uid, password, args.warehouse_code)
 
-    per_order = _needs_by_orders(models, db, uid, password, order_names)
+    only_draft = not args.permitir_venta_confirmada
+    per_order = _needs_by_orders(
+        models, db, uid, password, order_names, company_nak_id=int(args.company_nak), only_draft=only_draft
+    )
 
-    print(f"Nakel company_id={company_id} | src={src_loc} dst={dst_loc} | picking_type_id={picking_type_id}")
+    print(
+        f"Lectura ventas: NAK company_id={args.company_nak} | solo_draft={only_draft} "
+        f"(sale.order solo lectura; no se modifica la cotización)"
+    )
+    print(f"Stock/picking: Nakel SA company_id={company_id} | src={src_loc} dst={dst_loc} | picking_type_id={picking_type_id}")
     print("Modo:", "DRY-RUN" if args.dry_run else "APPLY")
 
     for oname in order_names:

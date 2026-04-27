@@ -1,6 +1,14 @@
 # Mover **lo disponible** desde `CEN/Existencias` → `CEN/Roturas 2` según órdenes (`master_dev`)
 
-**Contexto:** hay cotizaciones/pedidos en compañía **`Nak`** que no deben tocarse, pero el stock físico vive en **`Nakel SA`**. La necesidad operativa es mover mercadería real entre ubicaciones de Central:
+## Reglas (obligatorias)
+
+- **Solo** se leen `sale.order` de la compañía **NAK** (en `master_dev` suele ser `company_id=2`), en estado **borrador** (`state=draft` = cotización).  
+- **No** se procesan —ni se usan para cantidades— las órdenes de venta/cotizaciones de **Nakel SA** (`company_id=1`). El script **falla** si el nombre de orden corresponde a otra compañía.  
+- **No** se modifica la cotización: solo **lectura** de `sale.order` / `sale.order.line`. El movimiento de stock se crea solo en **Nakel SA** (`stock.picking` interno).
+
+**Plan A (elegido):** ejecutar el script a mano con `--dry-run` y luego `--apply` cuando corresponda (lista de `S0…` vía `--orden`, `--ordenes` o `--archivo-ordenes`).
+
+**Contexto:** el stock físico a mover vive en **`Nakel SA`**, aunque el pedido “documental” esté en **NAK**:
 
 - Origen: `CEN/Existencias` (`stock.location`, típicamente **id=102**)
 - Destino: `CEN/Roturas 2` (`stock.location`, típicamente **id=541**)
@@ -53,6 +61,12 @@ Aplicar (crea **un** `stock.picking` interno por orden, validado):
 
 ```bash
 python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --apply --orden S02202
+```
+
+Solo en casos excepcionales: permitir una orden NAK **no** borrador (no recomendado):
+
+```bash
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202 --permitir-venta-confirmada
 ```
 
 ## Notas / límites
