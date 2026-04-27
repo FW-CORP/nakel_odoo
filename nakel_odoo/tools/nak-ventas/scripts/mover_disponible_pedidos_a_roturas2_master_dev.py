@@ -100,6 +100,126 @@ def _resolve_internal_picking_type(models, db: int, uid: int, password: str, war
     return pts[0]["id"]
 
 
+def _ensure_move_lines_for_unreserved_moves(
+    models,
+    db: int,
+    uid: int,
+    password: str,
+    picking_id: int,
+) -> int:
+    """
+    Si algún stock.move tiene demanda > 0 pero sin líneas de detalle (Odoo no reservó),
+    crea una stock.move.line con qty_done = demanda para poder validar.
+    Devuelve cantidad de líneas creadas.
+    """
+    p = models.execute_kw(db, uid, password, "stock.picking", "read", [[picking_id]], {"fields": ["move_ids"]})[0]
+    created = 0
+    for mid in p.get("move_ids") or []:
+        mv = models.execute_kw(
+            db,
+            uid,
+            password,
+            "stock.move",
+            "read",
+            [[mid]],
+            {
+                "fields": [
+                    "product_id",
+                    "product_uom",
+                    "product_uom_qty",
+                    "quantity",
+                    "move_line_ids",
+                    "location_id",
+                    "location_dest_id",
+                    "state",
+                ]
+            },
+        )[0]
+        qty_need = float(mv.get("product_uom_qty") or 0.0)
+        if qty_need <= 0:
+            continue
+        if mv.get("move_line_ids"):
+            continue
+        loc_src = mv["location_id"][0]
+        loc_dst = mv["location_dest_id"][0]
+        prod_id = mv["product_id"][0]
+        uom_id = mv["product_uom"][0] if mv.get("product_uom") else None
+        if not uom_id:
+            pr = models.execute_kw(db, uid, password, "product.product", "read", [[prod_id]], {"fields": ["uom_id"]})[0]
+            uom_id = pr["uom_id"][0]
+        models.execute_kw(
+            db,
+            uid,
+            password,
+            "stock.move.line",
+            "create",
+            [
+                {
+                    "move_id": mid,
+                    "picking_id": picking_id,
+                    "product_id": prod_id,
+                    "location_id": loc_src,
+                    "location_dest_id": loc_dst,
+                    "product_uom_id": uom_id,
+                    "qty_done": qty_need,
+                }
+            ],
+        )
+        created += 1
+    return created
+
+
+def _finalize_pickings_same_origin(
+    models,
+    db: int,
+    uid: int,
+    password: str,
+    *,
+    origin: str,
+    company_id: int,
+) -> None:
+    """
+    Odoo a veces parte un traslado en varios pickings con el mismo `origin`.
+    Cierra los que queden en draft/waiting/confirmed/assigned (misma compañía).
+    """
+    dom = [
+        ("origin", "=", origin),
+        ("company_id", "=", company_id),
+        ("state", "not in", ("done", "cancel")),
+    ]
+    extra_ids = models.execute_kw(db, uid, password, "stock.picking", "search", [dom], {"order": "id asc"})
+    if not extra_ids:
+        return
+    print(f"APPLY: detectados {len(extra_ids)} albarán(es) pendiente(s) mismo origin={origin!r} → finalizando…")
+    for oid in extra_ids:
+        st = models.execute_kw(db, uid, password, "stock.picking", "read", [[oid]], {"fields": ["name", "state"]})[0]
+        state = st["state"]
+        if state == "draft":
+            models.execute_kw(db, uid, password, "stock.picking", "action_confirm", [[oid]])
+        try:
+            models.execute_kw(db, uid, password, "stock.picking", "action_assign", [[oid]])
+        except xmlrpc.client.Fault:
+            pass
+        n = _ensure_move_lines_for_unreserved_moves(models, db, uid, password, oid)
+        if n:
+            print(f"  picking {oid} ({st.get('name')}): creadas {n} línea(s) move_line (sin reserva previa)")
+        res = models.execute_kw(
+            db,
+            uid,
+            password,
+            "stock.picking",
+            "button_validate",
+            [[oid]],
+            {"context": {"skip_backorder": True}},
+        )
+        if isinstance(res, dict) and res.get("res_model"):
+            raise RuntimeError(
+                f"No se pudo validar picking relacionado id={oid} ({st.get('name')}): "
+                f"wizard {res.get('res_model')}. Revisar en Odoo."
+            )
+        print(f"  picking {oid} ({st.get('name')}): validado")
+
+
 def _needs_by_orders(
     models,
     db: int,
@@ -321,11 +441,12 @@ def main() -> int:
             print("APPLY: nada para crear (sin líneas).")
             continue
 
+        origin_str = f"{oname} -> Roturas2 (mover disponible)"
         picking_vals = {
             "picking_type_id": picking_type_id,
             "location_id": src_loc,
             "location_dest_id": dst_loc,
-            "origin": f"{oname} -> Roturas2 (mover disponible)",
+            "origin": origin_str,
             "company_id": company_id,
             "move_ids": [[0, 0, v] for v in moves],
         }
@@ -355,7 +476,10 @@ def main() -> int:
                 f"Picking id={pid_pick}. Revisar reservas/lotes/ubicaciones."
             )
 
-        print("APPLY: picking creado y validado:", pid_pick)
+        _finalize_pickings_same_origin(
+            models, db, uid, password, origin=origin_str, company_id=company_id
+        )
+        print("APPLY: picking principal validado:", pid_pick)
 
     return 0
 

@@ -79,6 +79,7 @@ python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_
 
 ## Notas / límites
 
+- A veces Odoo **divide** el traslado en **más de un** `stock.picking` con el mismo `origin`. El script, tras validar el principal, **busca y cierra** los demás albaranes pendientes con ese `origin` (asigna, crea `stock.move.line` con `qty_done` si el movimiento quedó sin reserva, y valida con `skip_backorder`).
 - El picking queda con `origin` tipo `S02202 -> Roturas2 (mover disponible)` para trazabilidad en **Nakel SA** (no modifica la cotización en **Nak**).
 - Si algún producto es **trazado por lote/serie** y hay múltiples lotes, puede aparecer un **wizard** al validar; en ese caso el script aborta con error explícito para no asumir un resultado ambiguo.
 - Si necesitás “un solo picking” para muchas órdenes juntas, decilo: hoy está **1 picking por orden** (más simple de auditar).
