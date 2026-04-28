@@ -24,6 +24,8 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `addons/nakel_wave_picking_link` (`nakel_wave_picking_link`)
 - `addons/modulo_rg5329` (`modulo_rg5329`)
 
+También en `addons/` (p. ej. permisos / UX): `nakel_sale_margin` — restringe margen y `%` a un grupo y evita el `(` huérfano junto a totales cuando no hay permiso.
+
 ## Documentación de usuarios y permisos
 
 - `docs/usuarios/` (permisos, grupos, estructuras, troubleshooting)
