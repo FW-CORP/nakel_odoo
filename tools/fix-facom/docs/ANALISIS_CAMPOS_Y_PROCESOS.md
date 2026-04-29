@@ -1,4 +1,42 @@
 ---
+title: Fix FACOM ? campos y proceso
+updated: 2026-04-28
+---
+
+## Qué se corrige
+
+Normalización de `account.move.name` en **Facturas de Proveedor** (compras):
+
+- `move_type = in_invoice`
+- `journal_id.code = FACOM`
+- normalmente `state = posted`
+
+El objetivo es que el ?Número? visible quede como:
+
+- `PV-NRO` (ej. `00010-00100648`) **con un solo guion**
+
+Esto es clave para evitar fallas en localización AR (ej. liquidación IIBB) que parsea el número con `split('-')`.
+
+## Campos involucrados
+
+- **`account.move.name`**: se reescribe con el formato final `PV-NRO`.
+- **`account.move.ref`**: fuente para derivar `PV` y `NRO` (regla ?Paula?).
+- **`account.move.journal_id`**: se usa para filtrar el diario `FACOM` y para chequear colisiones por nombre dentro del diario.
+- **`account.move.state`**: opcionalmente se filtra `posted` para no tocar borradores.
+
+## Regla de parseo (resumen)
+
+El criterio del script `scripts/aplicar_fix_facom.py` intenta, en este orden:
+
+1. Encontrar un patrón `PV-NRO` dentro de `ref` (dígitos-guion-dígitos).
+2. Si no hay guion pero hay dígitos, usa heurística: últimos 8 dígitos = `NRO`, y lo anterior (hasta 5 dígitos) = `PV`.
+
+## Casos especiales
+
+- **`ref` vacío / no parseable**: no se inventa un nombre; se deja para corrección manual (acción `SKIP_NO_PARSE`).
+- **Colisión**: si el `name_new` ya existe en el diario, se omite (acción `SKIP_COLLISION`) y se resuelve manualmente.
+
+---
 title: Analisis read-only  FACOM y numeracion de compras
 updated: 2026-04-25
 ---

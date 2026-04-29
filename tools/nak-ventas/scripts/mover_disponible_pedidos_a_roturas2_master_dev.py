@@ -51,6 +51,43 @@ def _get_xmlrpc_models(cfg: dict):
     return db, uid, models
 
 
+def _resolve_crm_tag_id(models, db: int, uid: int, password: str, *, name: str) -> int | None:
+    """
+    Resuelve el ID de crm.tag por nombre exacto (case sensitive como en Odoo).
+    Devuelve None si no existe.
+    """
+    rows = models.execute_kw(
+        db,
+        uid,
+        password,
+        "crm.tag",
+        "search_read",
+        [[("name", "=", name)]],
+        {"fields": ["id", "name"], "limit": 2},
+    )
+    if not rows:
+        return None
+    if len(rows) > 1:
+        raise RuntimeError(f"crm.tag ambiguo para name={name!r}: {rows}")
+    return int(rows[0]["id"])
+
+
+def _ensure_crm_tag_id(models, db: int, uid: int, password: str, *, name: str, color: int = 3) -> int:
+    tid = _resolve_crm_tag_id(models, db, uid, password, name=name)
+    if tid:
+        return tid
+    return int(
+        models.execute_kw(
+            db,
+            uid,
+            password,
+            "crm.tag",
+            "create",
+            [{"name": name, "color": int(color)}],
+        )
+    )
+
+
 def _resolve_locations(models, db: int, uid: int, password: str, company_id: int) -> Tuple[int, int]:
     def _loc(complete_name: str) -> int:
         recs = models.execute_kw(
@@ -229,6 +266,7 @@ def _needs_by_orders(
     *,
     company_nak_id: int,
     only_draft: bool = True,
+    skip_tag_id: int | None = None,
 ) -> Dict[str, Dict[int, float]]:
     """
     Lee líneas de venta solo de cotizaciones NAK: no modifica sale.order.
@@ -244,7 +282,7 @@ def _needs_by_orders(
             "sale.order",
             "search_read",
             [[("name", "=", name)]],
-            {"fields": ["id", "name", "company_id", "state"], "limit": 5},
+            {"fields": ["id", "name", "company_id", "state", "tag_ids"], "limit": 5},
         )
         if not sos:
             raise RuntimeError(f"No existe sale.order con name={name!r}")
@@ -265,6 +303,13 @@ def _needs_by_orders(
                 f"Orden {name!r} no está en borrador (state={st!r}). "
                 f"Solo se procesan cotizaciones (draft) de NAK. Confirmá o cancelá manualmente otra lógica si aplica."
             )
+
+        if skip_tag_id is not None:
+            tags = so.get("tag_ids") or []
+            if int(skip_tag_id) in [int(t) for t in tags]:
+                print(f"SKIP: Orden {name!r} ya tiene tag_id={skip_tag_id} (marcada como procesada).")
+                per_order[name] = {}
+                continue
 
         so_id = so["id"]
         line_ids = models.execute_kw(
@@ -313,6 +358,27 @@ def main() -> int:
     p.add_argument("--dry-run", action="store_true", help="No crea pickings; solo reporta.")
     p.add_argument("--apply", action="store_true", help="Crea y valida pickings (traslados internos).")
     p.add_argument(
+        "--skip-tag-name",
+        default="ProcesadaNN",
+        help="Nombre exacto de crm.tag en sale.order.tag_ids para SALTEAR cotizaciones ya marcadas (default: ProcesadaNN). Usar '' para deshabilitar.",
+    )
+    p.add_argument(
+        "--skip-tag-id",
+        type=int,
+        default=0,
+        help="ID de crm.tag para SALTEAR cotizaciones ya marcadas (tiene prioridad sobre --skip-tag-name). 0 = deshabilitado.",
+    )
+    p.add_argument(
+        "--mark-processed",
+        action="store_true",
+        help="En modo --apply, marca la cotización NAK con el tag (evita reprocesos).",
+    )
+    p.add_argument(
+        "--ensure-tag",
+        action="store_true",
+        help="Si el tag no existe, lo crea (solo si --mark-processed o si se usa para skip por nombre).",
+    )
+    p.add_argument(
         "--listar-omitidos",
         action="store_true",
         help="Lista productos de la cotización con pedido>0 pero stock=0 en CEN/Existencias (no se crea movimiento; es esperado).",
@@ -354,13 +420,33 @@ def main() -> int:
     db, uid, models = _get_xmlrpc_models(cfg)
     password = cfg["password"]
 
+    skip_tag_id: int | None = None
+    skip_tag_name = (args.skip_tag_name or "").strip()
+    if int(args.skip_tag_id or 0) > 0:
+        skip_tag_id = int(args.skip_tag_id)
+    elif skip_tag_name:
+        if args.ensure_tag:
+            skip_tag_id = _ensure_crm_tag_id(models, db, uid, password, name=skip_tag_name)
+        else:
+            skip_tag_id = _resolve_crm_tag_id(models, db, uid, password, name=skip_tag_name)
+            if skip_tag_id is None:
+                print(f"WARNING: skip-tag-name={skip_tag_name!r} no existe; no se salteará por tag.")
+                skip_tag_id = None
+
     company_id = int(args.company_nakel)
     src_loc, dst_loc = _resolve_locations(models, db, uid, password, company_id)
     picking_type_id = _resolve_internal_picking_type(models, db, uid, password, args.warehouse_code)
 
     only_draft = not args.permitir_venta_confirmada
     per_order = _needs_by_orders(
-        models, db, uid, password, order_names, company_nak_id=int(args.company_nak), only_draft=only_draft
+        models,
+        db,
+        uid,
+        password,
+        order_names,
+        company_nak_id=int(args.company_nak),
+        only_draft=only_draft,
+        skip_tag_id=skip_tag_id,
     )
 
     print(
@@ -480,6 +566,39 @@ def main() -> int:
             models, db, uid, password, origin=origin_str, company_id=company_id
         )
         print("APPLY: picking principal validado:", pid_pick)
+
+        if args.mark_processed:
+            if not (skip_tag_id or skip_tag_name):
+                raise RuntimeError("mark-processed requiere --skip-tag-id o --skip-tag-name (no vacío).")
+            tag_id_to_set = skip_tag_id
+            if tag_id_to_set is None and skip_tag_name:
+                # si no se resolvió antes, resolver/crear ahora
+                if args.ensure_tag:
+                    tag_id_to_set = _ensure_crm_tag_id(models, db, uid, password, name=skip_tag_name)
+                else:
+                    tag_id_to_set = _resolve_crm_tag_id(models, db, uid, password, name=skip_tag_name)
+            if not tag_id_to_set:
+                raise RuntimeError("No se pudo resolver el tag para mark-processed (revisar nombre/ID).")
+            so_id = models.execute_kw(
+                db,
+                uid,
+                password,
+                "sale.order",
+                "search",
+                [[("name", "=", oname)]],
+                {"limit": 2},
+            )
+            if so_id:
+                # add tag without removing others
+                models.execute_kw(
+                    db,
+                    uid,
+                    password,
+                    "sale.order",
+                    "write",
+                    [so_id, {"tag_ids": [(4, int(tag_id_to_set))]}],
+                )
+                print(f"APPLY: cotización {oname} marcada con tag_id={tag_id_to_set}")
 
     return 0
 

@@ -1,4 +1,39 @@
 ---
+title: Fix FACOM — correcciones manuales y excepciones
+updated: 2026-04-28
+---
+
+## Tipos de excepciones
+
+### 1) `SKIP_NO_PARSE` (ref vacío / no parseable)
+
+Cuando `account.move.ref` está vacío (o no se puede derivar `PV-NRO`), el script **no escribe** `name`.
+
+Acción recomendada:
+
+- completar `ref` con el formato que corresponda (idealmente conteniendo `PV-NRO`)
+- re-ejecutar el script para que tome el nuevo `ref`
+
+### 2) `SKIP_COLLISION` (colisión de nombre)
+
+Si el `name_new` ya existe en el diario `FACOM`, el script no escribe para evitar duplicar numeración.
+
+Acción recomendada:
+
+- revisar si existen facturas duplicadas / carga errónea
+- resolver el criterio (por ejemplo: corregir `ref`, o asignar el número correcto según documentación del proveedor)
+- recién después volver a ejecutar
+
+## IDs históricamente omitidos (por seguridad)
+
+En el runbook se usan como lista base de `--skip-move-ids`:
+
+- `21474, 97028`: `ref` incompleta (ej. “FC A” sin número), requieren completar `ref`
+- `25631, 38203, 79042`: colisiones observadas en master_dev (el `name_new` ya existe)
+
+Nota: si en algún entorno un ID deja de colisionar, se puede quitar de la lista y re-ejecutar.
+
+---
 title: Correcciones manuales (Paula) — FACOM
 updated: 2026-04-25
 ---

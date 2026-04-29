@@ -29,8 +29,8 @@ Derivado desde `account.move.ref` segun la regla de Paula.
   - colisiones (si se resuelven a mano)
 
 Referencias:
-- `docs/ANALISIS_CAMPOS_Y_PROCESOS.md`
-- `docs/CORRECCIONES_MANUALES_PAULA.md`
+- `docs/ANALISIS_CAMPOS_Y_PROCESOS.md` (este directorio)
+- `docs/CORRECCIONES_MANUALES_PAULA.md` (este directorio)
 
 ## 0) Checklist previo
 
