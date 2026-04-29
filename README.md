@@ -16,6 +16,7 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `tools/`: utilidades de despliegue, validación, migración.
   - `tools/nak-ventas/`: flujo NAK (cotizaciones `draft`) → traslado interno en Nakel SA `CEN/Existencias` → `CEN/Roturas 2` (script + doc cron desecho).
 - `docs/`: runbooks y documentación operativa.
+  - Incidentes / postmortems: `docs/incidentes/` (p. ej. upgrade `nakel_wave_picking_link` y OV, 2026-04-29).
 
 ## Módulos (prioridad 1 / instalados en `master_dev`)
 
