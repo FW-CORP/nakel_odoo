@@ -43,7 +43,7 @@ Mover (según relevamiento):
 - `modulo_rg5329`
 - `nakel_fix_pick`
 - `nakel_picking`
-- `nakel_wave_picking_link`
+- `nakel_wave_picking_link` (si falla upgrade en OV: ver `docs/incidentes/NAKEL_wave_picking_link_upgrade_OV_smartbuttons_2026-04-29.md` — deploy con espejo + `addons_path` + `-u`)
 - `purchase_flete_markup`
 
 ### 1.2 Validación inmediata (post-move + reinicio Odoo)

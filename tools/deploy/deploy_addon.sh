@@ -20,7 +20,7 @@ Variables (opcional):
   NAKEL_ODOO_CONF           (default /etc/odoo/odoo.conf)
 
 Notas:
-  - Este script copia el módulo a un staging remoto y luego a addons con sudo.
+  - Este script copia el módulo a un staging remoto y luego lo espeja a addons con sudo (rsync --delete).
   - Por defecto NO ejecuta -u. Para actualizar el módulo, usar el comando sugerido al final.
 EOF
 }
@@ -75,9 +75,11 @@ rsync -avz --delete \
   "${HOST}:${REMOTE_TMP}/"
 
 echo ""
-echo "2️⃣  Copiando a addons (sudo)..."
+echo "2️⃣  Sincronizando a addons (sudo, espejo con --delete)..."
+# Importante: `cp -r staging/* dest/` NO borra archivos viejos en destino y puede dejar mezcla
+# de versiones (p.ej. `models/sale_order.py` viejo + `views/*.xml` nuevo → error de vista al validar botones object).
 ssh -t "${SSH_OPTS[@]}" "${HOST}" \
-  "sudo mkdir -p '${REMOTE_ADDONS}' && sudo cp -r '${REMOTE_TMP}'/* '${REMOTE_ADDONS}/' && sudo chown -R odoo:odoo '${REMOTE_ADDONS}' && echo '✅ Copiado OK'"
+  "sudo mkdir -p '${REMOTE_ADDONS}' && sudo rsync -a --delete '${REMOTE_TMP}/' '${REMOTE_ADDONS}/' && sudo chown -R odoo:odoo '${REMOTE_ADDONS}' && echo '✅ Copiado OK'"
 
 echo ""
 echo "✅ Deploy completado."

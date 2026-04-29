@@ -19,6 +19,8 @@ tools/deploy/deploy_addon.sh nakel_picking odoo@10.5.0.41 master_dev
 tools/deploy/deploy_addon.sh nakel_fix_pick odoo@10.5.0.41 master_dev
 ```
 
+`deploy_addon.sh` **espeja** el addon en el servidor con `rsync --delete` (evita mezcla de archivos viejos + nuevos en el mismo directorio del módulo). Tras copiar, ejecutar el **`-u`** que imprime el script (stop → `--stop-after-init` → start).
+
 ## Deploy del “pack” (master_dev)
 
 ```bash
@@ -119,6 +121,7 @@ sudo systemctl start odoo
 | El módulo no aparece en Aplicaciones | `addons_path` no incluye el directorio raíz del custom, o el servicio no se reinició |
 | `fe_sendauth` al usar `odoo -u` en CLI | Falta `-c /etc/odoo/odoo.conf` (credenciales PG) |
 | Código Python viejo tras “Actualizar” en UI | Hace falta **reiniciar** Odoo tras desplegar archivos (ver runbook de actualización del módulo) |
+| Upgrade `nakel_wave_picking_link`: *“action_nakel_open_wave no es una acción válida en sale.order”* | Mezcla de versiones en disco (`cp` sin borrar huérfanos), **segunda copia** del módulo antes en `addons_path`, o servicio sin recargar Python; ver `docs/incidentes/NAKEL_wave_picking_link_upgrade_OV_smartbuttons_2026-04-29.md` |
 
 Referencias en repo: `tools/deploy/deploy_addon.sh` (variables `NAKEL_*`), y en `nakel_picking/UPGRADE.md` / `ACTUALIZACION_CORRECTA.md` (orden stop → `-u` → start).
 
