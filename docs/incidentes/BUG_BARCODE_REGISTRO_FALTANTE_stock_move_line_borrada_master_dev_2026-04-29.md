@@ -70,7 +70,7 @@ En modo desarrollador o shell Odoo, ver si el ID sigue existiendo:
 
 ### Subsanar a futuro (producto)
 
-- Parche en cliente Barcode / OWL: ante `MissingError` en `stock.move` / `stock.move.line`, **invalidar caché** y redirigir al **padre** (`stock.picking` o batch) en lugar de mostrar solo el diálogo en bucle.
+- **Implementado en `nakel_fix_pick` (18.0.1.0.2+):** parámetro `nakel_fix_pick.barcode_soft_missing` → handler JS que ante `MissingError` en `stock.move` / `stock.move.line` muestra aviso y **recarga** el cliente (evita el bucle del diálogo). Ver README del módulo.
 - Reducir operaciones que **eliminen** líneas con la pantalla abierta (procesos batch concurrentes sobre la misma ola).
 
 
