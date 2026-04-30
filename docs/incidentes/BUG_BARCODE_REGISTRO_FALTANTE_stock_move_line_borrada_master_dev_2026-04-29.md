@@ -35,3 +35,42 @@ En la pantalla **Escanear producto** (Barcode), al operar dentro de una ola/wave
 
 Si el problema se repite, conviene evaluar un fix a nivel backend (controlador/JS) para que ante “record missing” la app **re-sincronice** y recargue la ola en vez de quedar bloqueada.
 
+---
+
+## Variante (misma familia): `stock.move(<id>)` al salir / retroceder
+
+### Síntoma
+
+Mensaje equivalente, pero el registro citado es **`stock.move(170390)`** (ejemplo), no `stock.move.line`.
+
+### Qué es `stock.move`
+
+En inventario, cada **línea de producto/cantidad** dentro de un albarán (`stock.picking`) es un **`stock.move`**. Los detalles por ubicación/lote suelen ir en **`stock.move.line`**. Barcode y el formulario web guardan en memoria **IDs** de esos modelos; si el servidor **borró o reemplazó** el `stock.move` (re-reserva, cancelación, fusión de líneas, picking viejo saneado, etc.), el cliente sigue intentando **leer o refrescar** ese ID al **salir, retroceder o recargar** → *“El registro no existe o fue eliminado”*.
+
+### Por qué se nota más en picks / OV viejos
+
+- Historial de **re-reservas** o correcciones que **recrean** movimientos (IDs nuevos).
+- Picking **cancelado** o **dividido** dejando movimientos viejos eliminados.
+- Sesión del navegador con **URL o estado** (breadcrumb) que aún apunta al movimiento viejo.
+
+No implica necesariamente que lo que marcaste no se haya guardado: muchas veces el **write** ya se aplicó y el cartel aparece en un **read** posterior sobre un ID obsoleto.
+
+### Mitigación operativa (igual que arriba, reforzada)
+
+1. Salir al **menú** de Barcode (no depender del botón “Atrás” del navegador).
+2. Volver a abrir el **picking/ola desde el listado** (ruta “limpia”).
+3. **Recarga dura** (`Ctrl+Shift+R`) o borrar **datos del sitio** para ese dominio si el aviso reaparece siempre al navegar.
+
+### Comprobación rápida (técnico)
+
+En modo desarrollador o shell Odoo, ver si el ID sigue existiendo:
+
+- `stock.move` id **170390**: si no existe, el mensaje es **coherente** (cliente con estado viejo).
+- Si existe, revisar `picking_id`, `state` y si el picking sigue siendo el que tenías abierto en Barcode.
+
+### Subsanar a futuro (producto)
+
+- Parche en cliente Barcode / OWL: ante `MissingError` en `stock.move` / `stock.move.line`, **invalidar caché** y redirigir al **padre** (`stock.picking` o batch) en lugar de mostrar solo el diálogo en bucle.
+- Reducir operaciones que **eliminen** líneas con la pantalla abierta (procesos batch concurrentes sobre la misma ola).
+
+
