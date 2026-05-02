@@ -29,3 +29,6 @@ config_*.py
 .idea/
 .vscode/
 
+# Historial Git de repos que se aplanaron dentro de este árbol (no versionar)
+.git_embedded_backup/
+

@@ -2,7 +2,7 @@
 {
     "name": "Nakel - Wave link on pickings (OUT filterable)",
     "summary": "Propaga/permite filtrar OUT por ola (stock.picking.batch) vía campo almacenado.",
-    "version": "18.0.1.0.4",
+    "version": "18.0.1.0.6",
     "category": "Inventory/Inventory",
     "license": "LGPL-3",
     "depends": [
