@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Pivote: cliente (fila) × tipo doc × mes (columnas) × importes.
+        display_quantity: no forzar conteo como medida principal.
+        La acción ir.actions.act_window además envía pivot_* en contexto (ver menú):
+        el cliente OWL aplica eso en el primer load aunque venga otra vista pivote.
+    -->
+    <record id="view_account_move_pivot_my_sales" model="ir.ui.view">
+        <field name="name">account.move.pivot.clientes.cc.my.sales</field>
+        <field name="model">account.move</field>
+        <field name="arch" type="xml">
+            <pivot string="Cuentas corrientes (mis ventas)" display_quantity="false">
+                <field name="commercial_partner_id" type="row"/>
+                <field name="move_type" type="col"/>
+                <field name="invoice_date" interval="month" type="col"/>
+                <field name="amount_residual" type="measure"/>
+                <field name="amount_total_signed" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Tablero rápido: top deudores por saldo pendiente (misma semántica que el menú) -->
+    <record id="view_account_move_graph_my_sales" model="ir.ui.view">
+        <field name="name">account.move.graph.clientes.cc.my.sales</field>
+        <field name="model">account.move</field>
+        <field name="arch" type="xml">
+            <graph string="Saldo pendiente por cliente (mis ventas)" type="bar" order="DESC" stacked="0">
+                <field name="commercial_partner_id"/>
+                <field name="amount_residual" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_account_move_tree_my_sales" model="ir.ui.view">
+        <field name="name">account.move.list.clientes.cc.my.sales</field>
+        <field name="model">account.move</field>
+        <field name="arch" type="xml">
+            <list string="Documentos (mis ventas)" create="false" delete="false" duplicate="false" default_order="invoice_date desc, name desc">
+                <field name="name"/>
+                <field name="invoice_date"/>
+                <field name="commercial_partner_id"/>
+                <field name="journal_id" optional="show"/>
+                <field name="move_type" optional="show"/>
+                <field name="amount_total_signed" sum="Total"/>
+                <field name="amount_residual" sum="Total"/>
+                <field name="payment_state" optional="show"/>
+                <field name="state" optional="hide"/>
+            </list>
+        </field>
+    </record>
+</odoo>

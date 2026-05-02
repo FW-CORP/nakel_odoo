@@ -274,6 +274,14 @@ Por API (`ir.logging` en `master_dev`/`sg_dev1`) **suele no haber traza**: los e
 
 Hallazgos en código Odoo 18: **`mail.thread`** puede seguir disparando rutas que llaman **`write`** en el documento (p. ej. actividades, flags internos). **`_mail_post_access = 'read'`** ayuda en mensajes, pero no cubre todo. Por eso el ACL del módulo incluye **`perm_write=1`** en `account.move` / `line` **solo** para los grupos CC/vendedor, manteniendo **`perm_create` y `perm_unlink` en 0** y las **`ir.rule`** que limitan a facturas del comercial. El **`write()`** estándar de `account.move` sigue impidiendo tocar campos críticos en asientos **publicados**.
 
+### Vista pivote por defecto (sin configurar a mano)
+
+El menú usa **`ir.actions.act_window`** persistida **`action_act_window_clientes_cc_my_sales`** (no solo un dict devuelto por servidor): así Odoo 18 enlaza **`ir.actions.act_window.view`** al pivote y evalúa el dominio con **`uid`**.
+
+- **Pivote:** filas **cliente comercial**; columnas **tipo de movimiento** (factura / NC) y **mes de factura**; medidas **saldo pendiente** y **total en moneda compañía**. Contexto **`pivot_row_groupby` / `pivot_column_groupby` / `pivot_measures`** fuerza el primer render en el cliente OWL.
+- **Gráfico:** barras **saldo por cliente** (orden descendente).
+- **Lista:** columnas útiles (fecha, diario, importes, estado de pago).
+
 ### Tablero (Spreadsheet / Dashboard)
 
 La acción **`account.move.action_clientes_cc_open_my_sales_pivot()`** y el ítem de menú **Ventas → Órdenes → Cuentas corrientes (mis ventas)** (no bajo *Informes*, que en Odoo 18 es solo para *Responsable de ventas*) usan el mismo dominio que el smart button. En **Hoja de cálculo / Dashboard** (Enterprise) suele poder crearse un tablero que referencie la misma fuente (pivote sobre `account.move` con ese dominio) o duplicar la lógica en una celda vinculada; la ruta exacta depende de los módulos de BI instalados en cada base.

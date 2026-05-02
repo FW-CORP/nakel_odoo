@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from odoo import _, api, models
+from odoo import api, models
 
 
 class AccountMove(models.Model):
@@ -15,28 +15,8 @@ class AccountMove(models.Model):
     def action_clientes_cc_open_my_sales_pivot(self):
         """Facturas/NC de cliente posteadas con comercial = usuario actual.
 
-        Misma semántica que el smart button en contacto. Sirve para lista/pivote
-        y como origen de datos para tableros (Spreadsheet) enlazando esta acción.
+        Delega en la acción persistida (vistas pivote/gráfico/lista + contexto pivot_*).
         """
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Cuentas corrientes — mis ventas"),
-            "res_model": "account.move",
-            "view_mode": "pivot,list,graph,form",
-            "views": [
-                (False, "pivot"),
-                (False, "list"),
-                (False, "graph"),
-                (False, "form"),
-            ],
-            "domain": [
-                ("move_type", "in", ("out_invoice", "out_refund")),
-                ("state", "=", "posted"),
-                ("invoice_user_id", "=", self.env.uid),
-            ],
-            "context": {
-                **self.env.context,
-                "search_default_posted": 1,
-            },
-            "target": "current",
-        }
+        return self.env["ir.actions.actions"]._for_xml_id(
+            "clientes_cc_detalle.action_act_window_clientes_cc_my_sales"
+        )

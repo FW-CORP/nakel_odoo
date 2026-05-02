@@ -1,14 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Dominio dinámico (invoice_user_id = usuario): solo vía código -->
+        <!--
+        Acción persistida (no solo dict desde servidor): Odoo 18 rellena views desde BD
+        y el pivote respeta ir.actions.act_window.view + contexto pivot_*.
+        Dominio con uid se evalúa en el cliente al abrir.
+        -->
+        <record id="action_act_window_clientes_cc_my_sales" model="ir.actions.act_window">
+            <field name="name">Cuentas corrientes — mis ventas</field>
+            <field name="res_model">account.move</field>
+            <field name="view_mode">pivot,graph,list,form</field>
+            <field name="domain">[('move_type', 'in', ('out_invoice', 'out_refund')), ('state', '=', 'posted'), ('invoice_user_id', '=', uid)]</field>
+            <field name="context" eval="{
+                'search_default_posted': 1,
+                'pivot_row_groupby': ['commercial_partner_id'],
+                'pivot_column_groupby': ['move_type', 'invoice_date:month'],
+                'pivot_measures': ['amount_residual', 'amount_total_signed'],
+            }"/>
+            <field name="target">current</field>
+        </record>
+
+        <record id="action_act_window_clientes_cc_my_sales_view_pivot" model="ir.actions.act_window.view">
+            <field name="sequence" eval="1"/>
+            <field name="view_mode">pivot</field>
+            <field name="view_id" ref="view_account_move_pivot_my_sales"/>
+            <field name="act_window_id" ref="action_act_window_clientes_cc_my_sales"/>
+        </record>
+        <record id="action_act_window_clientes_cc_my_sales_view_graph" model="ir.actions.act_window.view">
+            <field name="sequence" eval="2"/>
+            <field name="view_mode">graph</field>
+            <field name="view_id" ref="view_account_move_graph_my_sales"/>
+            <field name="act_window_id" ref="action_act_window_clientes_cc_my_sales"/>
+        </record>
+        <record id="action_act_window_clientes_cc_my_sales_view_list" model="ir.actions.act_window.view">
+            <field name="sequence" eval="3"/>
+            <field name="view_mode">list</field>
+            <field name="view_id" ref="view_account_move_tree_my_sales"/>
+            <field name="act_window_id" ref="action_act_window_clientes_cc_my_sales"/>
+        </record>
+
+        <!-- Misma ventana que el menú (favoritos, automatizaciones, Spreadsheet). -->
         <record id="action_server_clientes_cc_my_sales" model="ir.actions.server">
             <field name="name">Cuentas corrientes — mis ventas</field>
             <field name="model_id" ref="account.model_account_move"/>
-            <!-- Sin groups_id: la visibilidad la marca el menú; si no, un admin sin
-                 group_cc_my_sales recibía acceso denegado al ejecutar la acción. -->
             <field name="state">code</field>
-            <field name="code">action = env['account.move'].action_clientes_cc_open_my_sales_pivot()</field>
+            <field name="code">action = env['ir.actions.actions']._for_xml_id('clientes_cc_detalle.action_act_window_clientes_cc_my_sales')</field>
         </record>
 
         <!--
@@ -20,7 +56,7 @@
             id="menu_clientes_cc_my_sales"
             name="Cuentas corrientes (mis ventas)"
             parent="sale.sale_order_menu"
-            action="action_server_clientes_cc_my_sales"
+            action="action_act_window_clientes_cc_my_sales"
             sequence="45"
             groups="base.group_system,sales_team.group_sale_salesman,sales_team.group_sale_manager,clientes_cc_detalle.group_cc_my_sales"
         />
