@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <!-- Vista previa web: menos filas = JSON más chico (WAN). Export mantiene todo. -->
-    <function model="account.report" name="write">
-        <value eval="[ref('l10n_ar_reports.l10n_ar_vat_book_report')]"/>
-        <value eval="{'load_more_limit': 400}"/>
-    </function>
-</odoo>
