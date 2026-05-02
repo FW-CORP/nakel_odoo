@@ -1,6 +1,6 @@
 # NAK / ventas (Nak + stock en Nakel SA)
 
-Ubicación en el repo: `nakel_odoo/tools/nak-ventas/`.
+**Fuente de verdad:** solo el repositorio **`nakel_odoo`** (`FW-CORP/nakel_odoo`), ruta **`tools/nak-ventas/`**. Cualquier copia en otro workspace sin ese remoto queda **fuera del esquema** de versionado y despliegue; los cambios se hacen **aquí** y se publican con `git push` desde la raíz de `nakel_odoo`.
 
 Material de trabajo para flujos donde la **cotización/pedido** está en compañía **Nak** (solo **borradores** / `draft`) pero el **stock físico** y los movimientos de almacén se hacen en **Nakel SA**. **No** usar órdenes de venta de Nakel SA como origen de cantidades.
 
