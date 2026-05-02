@@ -270,7 +270,7 @@ Orden: **negocio → seguridad → datos → UX → pruebas**.
 
 ### Tablero (Spreadsheet / Dashboard)
 
-La acción **`account.move.action_clientes_cc_open_my_sales_pivot()`** y el ítem de menú **Ventas → Informes → Cuentas corrientes (mis ventas)** usan el mismo dominio que el smart button. En **Hoja de cálculo / Dashboard** (Enterprise) suele poder crearse un tablero que referencie la misma fuente (pivote sobre `account.move` con ese dominio) o duplicar la lógica en una celda vinculada; la ruta exacta depende de los módulos de BI instalados en cada base.
+La acción **`account.move.action_clientes_cc_open_my_sales_pivot()`** y el ítem de menú **Ventas → Órdenes → Cuentas corrientes (mis ventas)** (no bajo *Informes*, que en Odoo 18 es solo para *Responsable de ventas*) usan el mismo dominio que el smart button. En **Hoja de cálculo / Dashboard** (Enterprise) suele poder crearse un tablero que referencie la misma fuente (pivote sobre `account.move` con ese dominio) o duplicar la lógica en una celda vinculada; la ruta exacta depende de los módulos de BI instalados en cada base.
 
 ---
 

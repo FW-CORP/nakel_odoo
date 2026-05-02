@@ -2,7 +2,7 @@
 {
     "name": "Nakel - CC por vendedor (Contacto)",
     "summary": "CC por vendedor: botón en contacto + menú pivote Ventas.",
-    "version": "18.0.1.0.5",
+    "version": "18.0.1.0.6",
     "category": "Sales/Sales",
     "author": "Nakel",
     "license": "LGPL-3",

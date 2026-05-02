@@ -10,6 +10,6 @@
     <record id="group_cc_my_sales" model="res.groups">
         <field name="name">Nakel: ver CC cliente (mis ventas)</field>
         <field name="category_id" ref="module_category_nakel_cc_detalle"/>
-        <field name="comment">Botón en contacto + menú Ventas → Informes → Cuentas corrientes (mis ventas); dominio invoice_user_id = usuario.</field>
+        <field name="comment">Botón en contacto + menú Ventas → Órdenes → Cuentas corrientes (mis ventas); dominio invoice_user_id = usuario.</field>
     </record>
 </odoo>
