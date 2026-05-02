@@ -243,4 +243,35 @@ Orden: **negocio → seguridad → datos → UX → pruebas**.
 
 ---
 
+## 12. Después del nuevo módulo: cerrar el «leak» del botón «Estado del cliente»
+
+**Recomendación:** sí — **sacar del paquete preventista** lo que solo existía para ver **Estado del cliente** / libros globales del partner. Ese botón llama a **`open_customer_statement`**: muestra la **cuenta corriente contable del contacto** (toda la compañía), no «solo mis ventas». Por eso un cliente con deuda o compras en **Belgrano / PDV / otro canal** sigue apareciendo ahí; es coherente con el problema que ya documentaste en permisos.
+
+### Qué suele habilitar ese leak
+
+1. **`account.group_account_readonly` (22)** como *implied* del grupo **«Vendedores - Preventistas» (102)**  
+   En la práctica trae reglas **`(1,'=',1)`** en `account.move` / líneas → **leen toda la contabilidad** accesible a ese perfil, no un recorte por vendedor.
+
+2. **Vista heredada** (script `docs/usuarios/PERMISOS/habilitar_boton_estado_cliente_vendedores_master_dev.py`) que agrega el grupo **102** al atributo `groups` del botón `open_customer_statement`, para que lo vean sin Facturación.
+
+### Pasos sugeridos (orden)
+
+1. **Validar** que preventistas ya usan el botón **«Cuenta corriente cliente»** del módulo `clientes_cc_detalle` y que cubre el uso operativo (cobranza sobre **sus** facturas).
+2. **Revertir la vista** del script de «habilitar Estado del cliente»: en ese script existe **`--rollback --apply`** para desactivar la vista `nakel_perm_scripts.res_partner_open_customer_statement_groups` (o equivalente en la base).
+3. En **Ajustes → Usuarios → Grupos → Vendedores - Preventistas**: **quitar** de *Grupos heredados* **`account.group_account_readonly`** (y cualquier otro grupo contable que solo se hubiera puesto para informes/CC global), **salvo** que negocio confirme que lo necesitan para otra pantalla.
+4. **Probar** con un usuario preventista: no debe ver **Estado del cliente**; sí el botón nuevo (grupo `clientes_cc_detalle.group_cc_my_sales`); abrir **sus** facturas desde la lista no debe dar `AccessError`. Si falla algo (p. ej. botón «Facturado» en contacto), ajustar **solo** lo necesario en lugar de volver a dar el 22 a todos.
+
+### Defensa en profundidad (opcional)
+
+- Si en alguna base quedara una vista que sigue mostrando `open_customer_statement` al 102, corregir el `groups` del botón para **no** incluir preventistas.
+- Gerencia / contabilidad mantienen los grupos que correspondan para **Estado del cliente** y reportes globales.
+
+---
+
+### Tablero (Spreadsheet / Dashboard)
+
+La acción **`account.move.action_clientes_cc_open_my_sales_pivot()`** y el ítem de menú **Ventas → Informes → Cuentas corrientes (mis ventas)** usan el mismo dominio que el smart button. En **Hoja de cálculo / Dashboard** (Enterprise) suele poder crearse un tablero que referencie la misma fuente (pivote sobre `account.move` con ese dominio) o duplicar la lógica en una celda vinculada; la ruta exacta depende de los módulos de BI instalados en cada base.
+
+---
+
 *Etapa 1: implementar Bloques 0–5. Etapa 2: §11 cuando negocio priorice liquidaciones y detalle 40/60 en comisiones.*

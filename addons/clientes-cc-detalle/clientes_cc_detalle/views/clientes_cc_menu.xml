@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Dominio dinámico (invoice_user_id = usuario): solo vía código -->
+        <record id="action_server_clientes_cc_my_sales" model="ir.actions.server">
+            <field name="name">Cuentas corrientes — mis ventas</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="groups_id" eval="[(4, ref('clientes_cc_detalle.group_cc_my_sales'))]"/>
+            <field name="state">code</field>
+            <field name="code">action = env['account.move'].action_clientes_cc_open_my_sales_pivot()</field>
+        </record>
+
+        <!-- Bajo Ventas → Reporting (estándar sale); no bajo Contactos -->
+        <menuitem
+            id="menu_clientes_cc_my_sales"
+            name="Cuentas corrientes (mis ventas)"
+            parent="sale.menu_sale_report"
+            action="action_server_clientes_cc_my_sales"
+            sequence="35"
+            groups="clientes_cc_detalle.group_cc_my_sales"
+        />
+    </data>
+</odoo>
