@@ -14,6 +14,8 @@ venv/
 *.pdf
 *.xlsx
 *.csv
+# Excepción: CSV estándar de derechos Odoo (el patrón anterior los excluía del repo)
+!**/ir.model.access.csv
 **/out/
 **/reportes/
 **/backups/
