@@ -1,3 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_clientes_cc_account_move_read,clientes_cc account.move read,account.model_account_move,clientes_cc_detalle.group_cc_my_sales,1,0,0,0
-access_clientes_cc_account_move_line_read,clientes_cc account.move.line read,account.model_account_move_line,clientes_cc_detalle.group_cc_my_sales,1,0,0,0

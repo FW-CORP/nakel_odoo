@@ -14,8 +14,6 @@ venv/
 *.pdf
 *.xlsx
 *.csv
-# Excepción puntual: ir.model.access.csv del módulo CC (no abrir *.csv en todo el monorepo)
-!addons/clientes-cc-detalle/**/ir.model.access.csv
 **/out/
 **/reportes/
 **/backups/
