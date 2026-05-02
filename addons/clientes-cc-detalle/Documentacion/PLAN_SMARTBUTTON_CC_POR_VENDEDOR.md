@@ -268,6 +268,12 @@ Orden: **negocio → seguridad → datos → UX → pruebas**.
 
 ---
 
+### Diagnóstico AccessError «no puede modificar» con solo lectura en ACL
+
+Por API (`ir.logging` en `master_dev`/`sg_dev1`) **suele no haber traza**: los errores de acceso del cliente no siempre se persisten ahí; hace falta **log del worker** (`odoo.log`) con `--log-level=debug_rpc` o reproducir con XML-RPC como el usuario.
+
+Hallazgos en código Odoo 18: **`mail.thread`** puede seguir disparando rutas que llaman **`write`** en el documento (p. ej. actividades, flags internos). **`_mail_post_access = 'read'`** ayuda en mensajes, pero no cubre todo. Por eso el ACL del módulo incluye **`perm_write=1`** en `account.move` / `line` **solo** para los grupos CC/vendedor, manteniendo **`perm_create` y `perm_unlink` en 0** y las **`ir.rule`** que limitan a facturas del comercial. El **`write()`** estándar de `account.move` sigue impidiendo tocar campos críticos en asientos **publicados**.
+
 ### Tablero (Spreadsheet / Dashboard)
 
 La acción **`account.move.action_clientes_cc_open_my_sales_pivot()`** y el ítem de menú **Ventas → Órdenes → Cuentas corrientes (mis ventas)** (no bajo *Informes*, que en Odoo 18 es solo para *Responsable de ventas*) usan el mismo dominio que el smart button. En **Hoja de cálculo / Dashboard** (Enterprise) suele poder crearse un tablero que referencie la misma fuente (pivote sobre `account.move` con ese dominio) o duplicar la lógica en una celda vinculada; la ruta exacta depende de los módulos de BI instalados en cada base.
