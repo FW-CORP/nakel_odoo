@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="group_ver_margen" model="res.groups">
+        <field name="name">Ver Margen de Ventas</field>
+        <field name="category_id" ref="base.module_category_sales_sales"/>
+        <field name="comment">Asignar solo a perfiles que deben ver costos/margen (p. ej. gerentes). Los vendedores no deben llevar este grupo: el margen al pie de la OV y las columnas de línea quedan ocultos.</field>
+    </record>
+</odoo>

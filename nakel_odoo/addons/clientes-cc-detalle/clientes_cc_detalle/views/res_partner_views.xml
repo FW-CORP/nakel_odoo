@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_partner_form_cc_my_sales" model="ir.ui.view">
+            <field name="name">res.partner.form.cc.my.sales</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[contains(@class,'oe_button_box')]" position="inside">
+                    <field name="cc_my_sales_currency_id" invisible="1"/>
+                    <button
+                        name="action_open_cc_my_sales"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-usd"
+                        groups="clientes_cc_detalle.group_cc_my_sales"
+                    >
+                        <!-- Saldo &gt;= 0: pendiente de cobro del subconjunto (0 = nada pendiente) -->
+                        <field
+                            name="cc_my_sales_residual"
+                            widget="statinfo"
+                            string="Cuenta corriente cliente"
+                            invisible="cc_my_sales_residual &lt; 0"
+                        />
+                        <!-- Saldo &lt; 0: crédito a favor del cliente en este subconjunto (en rojo) -->
+                        <field
+                            name="cc_my_sales_residual"
+                            widget="statinfo"
+                            string="Cuenta corriente cliente"
+                            class="text-danger"
+                            invisible="cc_my_sales_residual &gt;= 0"
+                        />
+                    </button>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

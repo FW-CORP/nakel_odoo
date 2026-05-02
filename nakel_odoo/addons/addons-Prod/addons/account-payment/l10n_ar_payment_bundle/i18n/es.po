@@ -1,0 +1,209 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_ar_payment_bundle
+# 
+# Translators:
+# Juan José Scarafía <scarafia.juanjose@gmail.com>, 2025
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-07-22 12:09+0000\n"
+"PO-Revision-Date: 2025-05-23 19:21+0000\n"
+"Last-Translator: Juan José Scarafía <scarafia.juanjose@gmail.com>, 2025\n"
+"Language-Team: Spanish (https://app.transifex.com/adhoc/teams/46451/es/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Language: es\n"
+"Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.report_payment_receipt_document
+msgid "<strong><span>Total Imputed</span></strong>"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.report_payment_receipt_document
+msgid "<strong><span>Total Paid</span></strong>"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model,name:l10n_ar_payment_bundle.model_account_chart_template
+msgid "Account Chart Template"
+msgstr "Plantilla de plan contable"
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_custom_list
+msgid "Amount"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_custom_list
+msgid "Amount in SC"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__bundle_counterpart_currency_amount
+msgid "Bundle Counterpart Currency Amount"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model,name:l10n_ar_payment_bundle.model_res_company
+msgid "Companies"
+msgstr "Compañías"
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__counterpart_exchange_rate
+msgid "Counterpart Exchange Rate"
+msgstr "Tasa de Imputación"
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__partner_id
+msgid "Customer/Vendor"
+msgstr "Cliente/Proveedor"
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_from_bundle_form
+msgid ""
+"IMPORTANT: Linked draft validation must be done from main receipt. Draft "
+"validation of a linked payment is only used for corrections and advanced use"
+" cases. Are you sure you want to continue?"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_form
+msgid ""
+"IMPORTANT: Linked payment validation must be done from main receipt. Manual "
+"validation of a linked payment is only used for corrections and advanced use"
+" cases. Are you sure you want to continue?"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__is_main_payment
+msgid "Is Main Payment"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model,name:l10n_ar_payment_bundle.model_account_journal
+msgid "Journal"
+msgstr "Diario"
+
+#. module: l10n_ar_payment_bundle
+#. odoo-python
+#: code:addons/l10n_ar_payment_bundle/models/account_payment.py:0
+msgid "Journal Entry"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__link_payment_ids
+msgid "Link Payment"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_search_bundle
+msgid "Linked Payments"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__main_payment_id
+msgid "Main Payment"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_search_bundle
+msgid "Main Payments"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#. odoo-python
+#: code:addons/l10n_ar_payment_bundle/models/account_chart_template.py:0
+msgid "Multiple payments"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#. odoo-python
+#: code:addons/l10n_ar_payment_bundle/models/account_payment.py:0
+msgid "Paid Bills"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#. odoo-python
+#: code:addons/l10n_ar_payment_bundle/models/account_payment.py:0
+msgid "Paid Invoices"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model,name:l10n_ar_payment_bundle.model_account_payment_method
+msgid "Payment Methods"
+msgstr "Métodos de pago"
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_form
+msgid "Payment Total (SC)"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:account.payment.method,name:l10n_ar_payment_bundle.account_payment_in_payment_bundle
+#: model:account.payment.method,name:l10n_ar_payment_bundle.account_payment_out_payment_bundle
+msgid "Payment multiple"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model,name:l10n_ar_payment_bundle.model_account_payment
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_custom_list
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_form
+msgid "Payments"
+msgstr "Pagos"
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_custom_list
+msgid "Rate"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_form
+msgid "Reset To Draft"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__show_move_button
+msgid "Show Move Button"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#. odoo-python
+#: code:addons/l10n_ar_payment_bundle/models/account_payment.py:0
+msgid ""
+"The main payment must have a name before a linked payment can be posted."
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#. odoo-python
+#: code:addons/l10n_ar_payment_bundle/models/account_payment.py:0
+msgid "The payment bundle amount always must be Zero"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,help:l10n_ar_payment_bundle.field_account_payment__to_pay_move_line_ids
+msgid "This lines are the ones the user has selected to be paid."
+msgstr "Estas líneas son las que el usuario ha seleccionado para pagar"
+
+#. module: l10n_ar_payment_bundle
+#: model:ir.model.fields,field_description:l10n_ar_payment_bundle.field_account_payment__to_pay_move_line_ids
+msgid "To Pay Lines"
+msgstr "Líneas a Pagar"
+
+#. module: l10n_ar_payment_bundle
+#: model_terms:ir.ui.view,arch_db:l10n_ar_payment_bundle.view_account_payment_custom_list
+msgid "Total"
+msgstr ""
+
+#. module: l10n_ar_payment_bundle
+#. odoo-python
+#: code:addons/l10n_ar_payment_bundle/models/account_journal.py:0
+msgid ""
+"You cannot assign a currency to journals that use the payment bundle payment"
+" method."
+msgstr ""
