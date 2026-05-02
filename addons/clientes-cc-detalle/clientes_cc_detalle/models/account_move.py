@@ -6,6 +6,11 @@ from odoo import _, api, models
 class AccountMove(models.Model):
     _inherit = "account.move"
 
+    # Por defecto mail.thread exige permiso de *escritura* para seguidores/chatter;
+    # con solo lectura en account.move Odoo muestra "no puede modificar". Lectura
+    # alcanza para abrir facturas/listas sin dar perm_write masivo.
+    _mail_post_access = "read"
+
     @api.model
     def action_clientes_cc_open_my_sales_pivot(self):
         """Facturas/NC de cliente posteadas con comercial = usuario actual.
