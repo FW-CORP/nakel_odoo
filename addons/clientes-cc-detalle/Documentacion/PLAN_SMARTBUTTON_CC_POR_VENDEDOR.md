@@ -286,7 +286,7 @@ El menú usa **`ir.actions.act_window`** persistida **`action_act_window_cliente
 
 Tras **quitar** `account.group_account_readonly` al grupo preventistas, `account_followup` puede seguir declarando **`total_due`** en la lista *Customer statements* o en el **`invisible`** del botón *Customer Statement* mientras los campos mostrados pasaron a **`total_all_due`**. El cliente OWL entonces falla al abrir `res.partner`.
 
-**Mitigación en el addon (18.0.1.0.15+):** dependencia `account_followup` + vistas heredadas en `views/res_partner_account_followup_fix.xml` (invisible con `total_all_due`; columna `total_due` solo para grupos contables básicos/readonly/invoice).
+**Mitigación en el addon (18.0.1.0.15+):** dependencia `account_followup` + `views/res_partner_account_followup_fix.xml`. Si tras quitar solo lectura aparece **`total_all_due` undefined**, es porque una vista Nakel (~prioridad 99) deja ver el botón *Customer Statement* a preventistas sin exponer ese campo: en **18.0.1.0.16** el mismo botón queda **solo** para `account.group_account_basic` / `readonly` / `invoice` (prioridad **150**), y la columna `total_due` de la lista sigue acotada a contabilidad.
 
 ### Tablero (Spreadsheet / Dashboard)
 
