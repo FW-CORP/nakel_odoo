@@ -35,7 +35,7 @@
             <field name="model">res.partner</field>
             <field name="inherit_id" ref="base.view_partner_form"/>
             <field name="arch" type="xml">
-                <xpath expr="//div[contains(@class,'oe_button_box')]" position="inside">
+                <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                     <field name="cc_my_sales_currency_id" invisible="1"/>
                     <button
                         name="action_open_cc_my_sales"

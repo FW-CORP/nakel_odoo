@@ -286,7 +286,7 @@ El menú usa **`ir.actions.act_window`** persistida **`action_act_window_cliente
 
 Tras **quitar** `account.group_account_readonly` al grupo preventistas, `account_followup` puede seguir declarando **`total_due`** en la lista *Customer statements* o en el **`invisible`** del botón *Customer Statement* mientras los campos mostrados pasaron a **`total_all_due`**. El cliente OWL entonces falla al abrir `res.partner`.
 
-**Mitigación en el addon (18.0.1.0.15+):** dependencia `account_followup` + `views/res_partner_account_followup_fix.xml`. Si **`total_all_due` undefined** persiste, otra vista puede **reabrir** el nodo del botón a preventistas: en **18.0.1.0.17** el botón *Customer Statement* se **reemplaza** entero (`position="replace"`) con `groups` en el `<button>` y **prioridad 1000** para que el subárbol no exista en el arch fusionado de quien no es contable; la lista `total_due` sigue acotada a contabilidad.
+**Mitigación en el addon (18.0.1.0.15+):** dependencia `account_followup` + `views/res_partner_account_followup_fix.xml`. El `replace` del botón *Customer Statement* debe colgar de **`base.view_partner_form`** con **prioridad 5000** (18.0.1.0.18): así corre **después** de las herencias que cuelgan del form base (Nakel ~99 + followup). El `replace` colgado solo de `account_followup.res_partner_view_form` podía quedar **antes** en el grafo y no ganarle a la vista Nakel. La lista `total_due` sigue acotada a contabilidad.
 
 ### Tablero (Spreadsheet / Dashboard)
 
