@@ -1,23 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!--
-        account_followup (EE): campos total_due / total_all_due no entran en web_read
-        si el usuario no tiene grupos contables. Una vista Nakel suele sumar preventistas
-        al botón open_customer_statement (prioridad ~99); al ver el botón, el OWL
-        parsea <field name="total_all_due"/> y revienta.
+        account_followup: total_all_due / total_all_overdue no están en web_read para
+        usuarios sin grupos contables. Cambiar solo @groups en el botón no basta si otra
+        vista (p. ej. Nakel prioridad 99) vuelve a ampliar grupos: el nodo sigue en el
+        arch fusionado y OWL parsea los <field>.
 
-        Prioridad 150: aplica después de esa herencia y deja el botón *solo* para
-        usuarios que sí reciben esos campos. Los preventistas usan la CC Nakel.
+        Solución: position="replace" del botón entero con groups en el <button> para que
+        el subárbol no exista en el arch de quien no es contable. Prioridad 1000.
     -->
     <record id="view_partner_form_followup_statement_safe" model="ir.ui.view">
-        <field name="name">res.partner.form: Customer Statement solo contabilidad</field>
+        <field name="name">res.partner.form: Customer Statement botón reemplazado (grupos contables)</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="account_followup.res_partner_view_form"/>
-        <field name="priority">150</field>
+        <field name="priority">1000</field>
         <field name="arch" type="xml">
-            <xpath expr="//button[@name='open_customer_statement']" position="attributes">
-                <attribute name="groups">account.group_account_basic,account.group_account_readonly,account.group_account_invoice</attribute>
-                <attribute name="invisible">not has_moves or total_all_due == 0</attribute>
+            <xpath expr="//button[@name='open_customer_statement']" position="replace">
+                <button
+                    groups="account.group_account_basic,account.group_account_readonly,account.group_account_invoice"
+                    type="object"
+                    class="oe_stat_button"
+                    name="open_customer_statement"
+                    icon="fa-list"
+                    invisible="not has_moves or total_all_due == 0"
+                >
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value">
+                            <field
+                                name="total_all_due"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"
+                                invisible="total_all_due == 0 or total_all_overdue == 0"
+                                class="text-danger"
+                            />
+                            <field
+                                name="total_all_due"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"
+                                invisible="total_all_due == 0 or total_all_overdue != 0"
+                            />
+                        </span>
+                        <span class="o_stat_text">Customer Statement</span>
+                    </div>
+                </button>
             </xpath>
         </field>
     </record>
