@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        account_followup (EE): sin grupos contables, web_read no expone total_due
+        pero la vista sigue referenciándolo (lista customer statements o invisible
+        del botón) → OwlError "total_due field is undefined" al abrir contacto.
+    -->
+    <record id="view_partner_form_followup_statement_invisible_fix" model="ir.ui.view">
+        <field name="name">res.partner.form: statement invisible usa total_all_due</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account_followup.res_partner_view_form"/>
+        <field name="priority">40</field>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='open_customer_statement']" position="attributes">
+                <attribute name="invisible">not has_moves or total_all_due == 0</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_partner_tree_customer_statements_total_due_groups" model="ir.ui.view">
+        <field name="name">res.partner list customer statements: total_due solo contabilidad</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account_followup.customer_statements_tree_view"/>
+        <field name="priority">40</field>
+        <field name="arch" type="xml">
+            <field name="total_due" position="attributes">
+                <attribute name="groups">account.group_account_basic,account.group_account_readonly,account.group_account_invoice</attribute>
+            </field>
+        </field>
+    </record>
+</odoo>

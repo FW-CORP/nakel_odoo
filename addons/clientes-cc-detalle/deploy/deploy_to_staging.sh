@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ADDON_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MODULE_DIR="${ADDON_ROOT}/clientes_cc_detalle"
 
-STAGE_HOST="${STAGE_HOST:-10.5.0.40}"
+STAGE_HOST="${STAGE_HOST:-10.5.0.41}"
 STAGE_USER="${STAGE_USER:-odoo}"
 REMOTE_BASE="${REMOTE_BASE:-/opt/odoo/custom-addons}"
 MODULE_NAME="${MODULE_NAME:-clientes_cc_detalle}"

@@ -10,10 +10,14 @@
         <field name="name">account.move.pivot.clientes.cc.my.sales</field>
         <field name="model">account.move</field>
         <field name="arch" type="xml">
-            <pivot string="Cuentas corrientes (mis ventas)" display_quantity="false">
+            <!--
+                Cliente en filas × estado de cobro en columnas (pocas columnas, lectura rápida).
+                default_order: prioriza deudores al abrir el pivote.
+                display_quantity: el conteo queda disponible en «Medidas» sin ser la única señal.
+            -->
+            <pivot string="Cuentas corrientes (mis ventas)" display_quantity="true" default_order="amount_residual desc">
                 <field name="commercial_partner_id" type="row"/>
-                <field name="move_type" type="col"/>
-                <field name="invoice_date" interval="month" type="col"/>
+                <field name="payment_state" type="col"/>
                 <field name="amount_residual" type="measure"/>
                 <field name="amount_total_signed" type="measure"/>
             </pivot>

@@ -1,0 +1,13 @@
+# Secretos locales (tokens Forgejo, etc.) — nunca commitear
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.log
+.DS_Store
+.idea/
+.vscode/
