@@ -1,0 +1,3 @@
+## Evitar git embebido (legacy repo) dentro del árbol QWeb
+trash/legacy_repo/QWeb-Modelos-templates/
+

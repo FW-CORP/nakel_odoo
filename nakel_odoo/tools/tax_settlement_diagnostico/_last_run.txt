@@ -1,0 +1,52 @@
+Conectado (solo lectura): https://nakel.net.ar db=master_dev
+withholding_id -> modelo 'l10n_ar.payment.withholding'
+Registros l10n_ar.payment.withholding con name False o '': 43 (tope búsqueda 500)
+Muestra (hasta 50):
+  id=1 name=False display_name=False
+  id=4 name=False display_name=False
+  id=5 name=False display_name=False
+  id=15 name=False display_name=False
+  id=16 name=False display_name=False
+  id=17 name=False display_name=False
+  id=18 name=False display_name=False
+  id=19 name=False display_name=False
+  id=20 name=False display_name=False
+  id=21 name=False display_name=False
+  id=22 name=False display_name=False
+  id=23 name=False display_name=False
+  id=24 name=False display_name=False
+  id=25 name=False display_name=False
+  id=26 name=False display_name=False
+  id=27 name=False display_name=False
+  id=28 name=False display_name=False
+  id=29 name=False display_name=False
+  id=30 name=False display_name=False
+  id=31 name=False display_name=False
+  id=32 name=False display_name=False
+  id=33 name=False display_name=False
+  id=48 name=False display_name=False
+  id=54 name=False display_name=False
+  id=55 name=False display_name=False
+  id=56 name=False display_name=False
+  id=57 name=False display_name=False
+  id=58 name=False display_name=False
+  id=59 name=False display_name=False
+  id=60 name=False display_name=False
+  id=61 name=False display_name=False
+  id=62 name=False display_name=False
+  id=63 name=False display_name=False
+  id=64 name=False display_name=False
+  id=65 name=False display_name=False
+  id=66 name=False display_name=False
+  id=67 name=False display_name=False
+  id=68 name=False display_name=False
+  id=72 name=False display_name=False
+  id=73 name=False display_name=False
+  id=74 name=False display_name=False
+  id=75 name=False display_name=False
+  id=76 name=False display_name=False
+Muestreo AML con withholding_id: 400 líneas; con retención name vacío en ese conjunto: 0
+ir.actions.server(1065): name='Download File' model='Journal Item' state='code'
+  code (primeras 200 chars): 'action = records.get_tax_settlement_file()'
+
+Solo lectura: no se modificó ningún registro.

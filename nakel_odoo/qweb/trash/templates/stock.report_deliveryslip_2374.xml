@@ -1,0 +1,9 @@
+<!-- Template: report_deliveryslip -->
+<!-- Key: stock.report_deliveryslip -->
+<!-- ID: 2374 -->
+
+<t t-name="stock.report_deliveryslip">
+        <t t-foreach="docs" t-as="o">
+            <t t-call="stock.report_delivery_document" t-lang="o._get_report_lang()"/>
+        </t>
+    </t>

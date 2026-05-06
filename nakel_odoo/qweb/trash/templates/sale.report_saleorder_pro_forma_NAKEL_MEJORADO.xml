@@ -1,0 +1,283 @@
+<!-- Template mejorado: Factura Proforma Nakel -->
+<!-- Diseño profesional con logo y branding de Nakel -->
+<t t-name="sale.report_saleorder_pro_forma">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="o">
+<t t-call="web.external_layout">
+    <div class="page">
+      
+      <!-- Encabezado con logo y branding Nakel -->
+      <div class="nakel-header" style="border-bottom: 3px solid #2c3e50; margin-bottom: 20px; padding-bottom: 15px;">
+        <div class="row">
+          <!-- Logo de la empresa (izquierda) -->
+          <div class="col-3">
+            <div style="text-align: left;">
+              <t t-if="o.company_id.logo">
+                <img t-att-src="image_data_uri(o.company_id.logo)" alt="Logo" style="max-height: 80px; max-width: 200px;"/>
+              </t>
+              <t t-else="">
+                <!-- Placeholder para logo si no existe -->
+                <div style="height: 60px; width: 150px; background-color: #f8f9fa; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #2c3e50;">
+                  <span t-field="o.company_id.name"/>
+                </div>
+              </t>
+            </div>
+          </div>
+          
+          <!-- Información de la empresa y título PROFORMA (centro) -->
+          <div class="col-6" style="text-align: center;">
+            <h1 style="margin: 0; color: #2c3e50; font-size: 36px; font-weight: bold; letter-spacing: 2px;">NAKEL</h1>
+            <h2 style="margin: 5px 0; color: #34495e; font-size: 24px; font-weight: 600;">FACTURA PROFORMA</h2>
+            <p style="margin: 5px 0; font-size: 14px; color: #7f8c8d; font-style: italic;">Presupuesto / Cotización</p>
+          </div>
+          
+          <!-- Número y fecha (derecha) -->
+          <div class="col-3" style="text-align: right;">
+            <div style="background-color: #ecf0f1; padding: 10px; border-radius: 5px; border-left: 4px solid #3498db;">
+              <p style="margin: 0; font-size: 11px; color: #7f8c8d; text-transform: uppercase;">Número</p>
+              <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #2c3e50;">
+                <span t-field="o.name"/>
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 11px; color: #7f8c8d; text-transform: uppercase;">Fecha</p>
+              <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: 600; color: #2c3e50;">
+                <span t-field="o.date_order" t-options="{'widget': 'date'}"/>
+              </p>
+              <t t-if="o.validity_date">
+                <p style="margin: 10px 0 0 0; font-size: 11px; color: #7f8c8d; text-transform: uppercase;">Válida hasta</p>
+                <p style="margin: 5px 0 0 0; font-size: 12px; font-weight: 600; color: #e74c3c;">
+                  <span t-field="o.validity_date" t-options="{'widget': 'date'}"/>
+                </p>
+              </t>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Información fiscal de la empresa (debajo del encabezado) -->
+        <div class="row mt-3" style="font-size: 12px; color: #34495e; border-top: 1px solid #ecf0f1; padding-top: 10px;">
+          <div class="col-6">
+            <strong t-field="o.company_id.name"/><br/>
+            <span t-field="o.company_id.street"/>
+            <t t-if="o.company_id.street2"> - <span t-field="o.company_id.street2"/></t><br/>
+            <span t-field="o.company_id.city"/>
+            <t t-if="o.company_id.state_id"> - <span t-field="o.company_id.state_id.name"/></t>
+            <t t-if="o.company_id.zip"> (<span t-field="o.company_id.zip"/>)</t><br/>
+            <t t-if="o.company_id.country_id"><span t-field="o.company_id.country_id.name"/></t>
+          </div>
+          <div class="col-6" style="text-align: right;">
+            <t t-if="o.company_id.phone">
+              <strong>Teléfono:</strong> <span t-field="o.company_id.phone"/><br/>
+            </t>
+            <t t-if="o.company_id.email">
+              <strong>Email:</strong> <span t-field="o.company_id.email"/><br/>
+            </t>
+            <t t-if="o.company_id.website">
+              <strong>Web:</strong> <span t-field="o.company_id.website"/><br/>
+            </t>
+            <t t-if="o.company_id.vat">
+              <strong>CUIT:</strong> <span t-field="o.company_id.vat"/><br/>
+            </t>
+            <t t-if="o.company_id.l10n_ar_gross_income_number">
+              <strong>IIBB:</strong> <span t-field="o.company_id.l10n_ar_gross_income_number"/>
+            </t>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información del cliente -->
+      <div class="client-info" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #3498db;">
+        <div class="row">
+          <div class="col-12">
+            <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 16px; font-weight: bold;">DATOS DEL CLIENTE</h4>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <t t-if="o.partner_id.name">
+              <strong>Nombre/Razón Social:</strong> <span t-field="o.partner_id.name"/><br/>
+            </t>
+            <t t-if="o.partner_id.vat">
+              <strong>CUIT/DNI:</strong> <span t-field="o.partner_id.vat"/><br/>
+            </t>
+            <t t-if="o.partner_id.phone">
+              <strong>Teléfono:</strong> <span t-field="o.partner_id.phone"/><br/>
+            </t>
+            <t t-if="o.partner_id.email">
+              <strong>Email:</strong> <span t-field="o.partner_id.email"/>
+            </t>
+          </div>
+          <div class="col-6">
+            <t t-if="o.partner_id.street">
+              <strong>Domicilio:</strong> <span t-field="o.partner_id.street"/>
+              <t t-if="o.partner_id.street2"> - <span t-field="o.partner_id.street2"/></t><br/>
+            </t>
+            <t t-if="o.partner_id.city">
+              <strong>Localidad:</strong> <span t-field="o.partner_id.city"/>
+            </t>
+            <t t-if="o.partner_id.state_id"> - <span t-field="o.partner_id.state_id.name"/></t>
+            <t t-if="o.partner_id.zip"> (<span t-field="o.partner_id.zip"/>)</t><br/>
+            <t t-if="o.partner_id.country_id">
+              <strong>País:</strong> <span t-field="o.partner_id.country_id.name"/>
+            </t>
+          </div>
+        </div>
+        <t t-if="o.partner_shipping_id and o.partner_shipping_id != o.partner_id">
+          <div class="row mt-2" style="border-top: 1px solid #dee2e6; padding-top: 10px; margin-top: 10px;">
+            <div class="col-12">
+              <strong>Dirección de entrega:</strong><br/>
+              <span t-field="o.partner_shipping_id.street"/>
+              <t t-if="o.partner_shipping_id.street2"> - <span t-field="o.partner_shipping_id.street2"/></t>,
+              <span t-field="o.partner_shipping_id.city"/>
+              <t t-if="o.partner_shipping_id.state_id"> - <span t-field="o.partner_shipping_id.state_id.name"/></t>
+            </div>
+          </div>
+        </t>
+      </div>
+
+      <!-- Condiciones comerciales -->
+      <t t-if="o.payment_term_id or o.user_id">
+        <div class="row mb-3" style="font-size: 12px;">
+          <div class="col-6">
+            <t t-if="o.payment_term_id">
+              <strong>Condición de pago:</strong> <span t-field="o.payment_term_id.name"/>
+            </t>
+          </div>
+          <div class="col-6" style="text-align: right;">
+            <t t-if="o.user_id">
+              <strong>Comercial:</strong> <span t-field="o.user_id.name"/>
+            </t>
+          </div>
+        </div>
+      </t>
+
+      <!-- Detalle de productos/servicios -->
+      <h5 style="margin: 20px 0 10px 0; color: #2c3e50; font-size: 16px; font-weight: bold;">DETALLE DE PRODUCTOS / SERVICIOS</h5>
+      <div class="row">
+        <div class="col-12">
+          <table class="table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr style="background-color: #34495e; color: white;">
+                <th style="padding: 12px; text-align: left; border: 1px solid #2c3e50; font-weight: 600;">Código</th>
+                <th style="padding: 12px; text-align: left; border: 1px solid #2c3e50; font-weight: 600;">Descripción</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #2c3e50; font-weight: 600;">Cantidad</th>
+                <th style="padding: 12px; text-align: right; border: 1px solid #2c3e50; font-weight: 600;">Precio Unit.</th>
+                <th style="padding: 12px; text-align: right; border: 1px solid #2c3e50; font-weight: 600;">Descuento</th>
+                <th style="padding: 12px; text-align: right; border: 1px solid #2c3e50; font-weight: 600;">Impuestos</th>
+                <th style="padding: 12px; text-align: right; border: 1px solid #2c3e50; font-weight: 600;">Importe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <t t-foreach="o.order_line" t-as="l">
+                <tr style="border-bottom: 1px solid #dee2e6;">
+                  <td style="padding: 10px; border: 1px solid #dee2e6;">
+                    <span t-field="l.product_id.default_code"/>
+                  </td>
+                  <td style="padding: 10px; border: 1px solid #dee2e6;">
+                    <strong><span t-field="l.product_id.name"/></strong>
+                    <t t-if="l.name and l.name != l.product_id.name">
+                      <br/><span style="font-size: 11px; color: #7f8c8d;" t-field="l.name"/>
+                    </t>
+                  </td>
+                  <td style="padding: 10px; text-align: center; border: 1px solid #dee2e6;">
+                    <span t-esc="'%.2f' % (l.product_uom_qty or 0)"/>
+                    <t t-if="l.product_uom">
+                      <span style="font-size: 10px; color: #7f8c8d;"> <span t-field="l.product_uom.name"/></span>
+                    </t>
+                  </td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">
+                    <span t-esc="'%.2f' % (l.price_unit or 0)"/>
+                  </td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">
+                    <t t-if="l.discount">
+                      <span t-esc="'%.0f' % l.discount"/>%
+                    </t>
+                    <t t-else="">-</t>
+                  </td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-size: 11px;">
+                    <t t-if="l.tax_id">
+                      <t t-foreach="l.tax_id" t-as="tax">
+                        <span t-esc="tax.amount * 100"/>%
+                        <t t-if="tax != l.tax_id[-1]">, </t>
+                      </t>
+                    </t>
+                    <t t-else="">-</t>
+                  </td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">
+                    $<span t-esc="'%.2f' % (l.price_subtotal or 0)"/>
+                  </td>
+                </tr>
+              </t>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Totales -->
+      <div class="row">
+        <div class="col-7">
+          <!-- Notas y condiciones -->
+          <t t-if="o.note">
+            <div style="background-color: #fff3cd; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107; margin-bottom: 15px;">
+              <strong>Notas / Observaciones:</strong><br/>
+              <span t-field="o.note"/>
+            </div>
+          </t>
+          <div style="font-size: 11px; color: #7f8c8d; line-height: 1.6;">
+            <strong>Condiciones comerciales:</strong><br/>
+            Esta cotización es válida por <t t-if="o.validity_date"><span t-field="o.validity_date" t-options="{'widget': 'date'}"/></t><t t-else="">30 días</t> desde su emisión.<br/>
+            Los precios están expresados en pesos argentinos e incluyen IVA cuando corresponde.<br/>
+            <t t-if="o.payment_term_id">
+              Forma de pago: <span t-field="o.payment_term_id.name"/>.<br/>
+            </t>
+            Esta es una factura proforma y no tiene valor contable.
+          </div>
+        </div>
+        <div class="col-5">
+          <table style="width: 100%; margin-left: auto; font-size: 14px;">
+            <tr>
+              <td style="text-align: right; padding: 8px; border-bottom: 1px solid #dee2e6;"><strong>Base Imponible:</strong></td>
+              <td style="text-align: right; padding: 8px; border-bottom: 1px solid #dee2e6;">$<span t-esc="'%.2f' % (o.amount_untaxed or 0)"/></td>
+            </tr>
+            <t t-if="o.amount_tax > 0">
+              <tr>
+                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #dee2e6;"><strong>IVA:</strong></td>
+                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #dee2e6;">$<span t-esc="'%.2f' % (o.amount_tax or 0)"/></td>
+              </tr>
+            </t>
+            <t t-if="o.amount_total != (o.amount_untaxed + o.amount_tax)">
+              <tr>
+                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #dee2e6;"><strong>Percepciones:</strong></td>
+                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #dee2e6;">$<span t-esc="'%.2f' % ((o.amount_total - o.amount_untaxed - o.amount_tax) or 0)"/></td>
+              </tr>
+            </t>
+            <tr style="background-color: #34495e; color: white;">
+              <td style="text-align: right; padding: 12px; font-size: 18px; font-weight: bold;">TOTAL:</td>
+              <td style="text-align: right; padding: 12px; font-size: 18px; font-weight: bold;">$<span t-esc="'%.2f' % (o.amount_total or 0)"/></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="row mt-4" style="border-top: 2px solid #ecf0f1; padding-top: 15px; margin-top: 30px;">
+        <div class="col-12" style="text-align: center; font-size: 11px; color: #7f8c8d;">
+          <strong>NAKEL</strong> - <span t-field="o.company_id.name"/><br/>
+          <t t-if="o.company_id.street"><span t-field="o.company_id.street"/>, </t>
+          <span t-field="o.company_id.city"/>
+          <t t-if="o.company_id.zip"> (<span t-field="o.company_id.zip"/>)</t>
+          <t t-if="o.company_id.state_id"> - <span t-field="o.company_id.state_id.name"/></t><br/>
+          <t t-if="o.company_id.phone">Tel: <span t-field="o.company_id.phone"/></t>
+          <t t-if="o.company_id.email"> | Email: <span t-field="o.company_id.email"/></t>
+          <t t-if="o.company_id.website"> | Web: <span t-field="o.company_id.website"/></t>
+        </div>
+      </div>
+
+      <!-- Numeración de página -->
+      <div style="position: absolute; bottom: 10mm; right: 10mm; font-size: 10px; color: #95a5a6;">
+        Página <span class="page"/> de <span class="topage"/>
+      </div>
+    </div>
+  </t>
+</t>
+</t>
+</t>
+

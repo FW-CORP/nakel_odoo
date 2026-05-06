@@ -282,6 +282,14 @@ El menú usa **`ir.actions.act_window`** persistida **`action_act_window_cliente
 - **Gráfico:** barras **saldo por cliente** (orden descendente).
 - **Lista:** columnas útiles (fecha, diario, importes, estado de pago).
 
+### OwlError `total_due` undefined al abrir contacto (preventistas sin contabilidad)
+
+Tras **quitar** `account.group_account_readonly` al grupo preventistas, `account_followup` puede seguir declarando **`total_due`** en la lista *Customer statements* o en el **`invisible`** del botón *Customer Statement* mientras los campos mostrados pasaron a **`total_all_due`**. El cliente OWL entonces falla al abrir `res.partner`.
+
+**Mitigación en el addon (18.0.1.0.15+):** dependencia `account_followup` + `views/res_partner_account_followup_fix.xml`. El `replace` del botón *Customer Statement* debe colgar de **`base.view_partner_form`** con **prioridad 5000** (18.0.1.0.18): así corre **después** de las herencias que cuelgan del form base (Nakel ~99 + followup). El `replace` colgado solo de `account_followup.res_partner_view_form` podía quedar **antes** en el grafo y no ganarle a la vista Nakel. La lista `total_due` sigue acotada a contabilidad.
+
+**Validación producción (`nakel.net.ar`, 2026-05):** confirmado por negocio — formulario **contacto** abre sin `OwlError` para preventista (sin `Accounting / Read-only`), con CC Nakel operativa. Procedimiento aplicado: código al día (`clientes_cc_detalle` ≥ 18.0.1.0.18), **`-u clientes_cc_detalle`**, reinicio de servicio según política del host, recarga fuerte del navegador. **No** hace falta “activar” la vista en Ajustes; opcional archivar vista Nakel duplicada *Estado del cliente* si quedó obsoleta.
+
 ### Tablero (Spreadsheet / Dashboard)
 
 La acción **`account.move.action_clientes_cc_open_my_sales_pivot()`** y el ítem de menú **Ventas → Órdenes → Cuentas corrientes (mis ventas)** (no bajo *Informes*, que en Odoo 18 es solo para *Responsable de ventas*) usan el mismo dominio que el smart button. En **Hoja de cálculo / Dashboard** (Enterprise) suele poder crearse un tablero que referencie la misma fuente (pivote sobre `account.move` con ese dominio) o duplicar la lógica en una celda vinculada; la ruta exacta depende de los módulos de BI instalados en cada base.

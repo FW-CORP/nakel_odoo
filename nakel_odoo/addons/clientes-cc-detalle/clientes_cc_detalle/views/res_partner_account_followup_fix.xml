@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        total_all_due: solo contadores. Heredar desde base.view_partner_form con
+        prioridad muy alta para que el replace corra *después* de account_followup
+        y de vistas Nakel que cuelgan del form base (p. ej. grupos en el mismo botón).
+    -->
+    <record id="view_partner_form_statement_button_replace_base" model="ir.ui.view">
+        <field name="name">res.partner.form: Customer Statement (replace desde base)</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="priority">5000</field>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='open_customer_statement']" position="replace">
+                <button
+                    groups="account.group_account_basic,account.group_account_readonly,account.group_account_invoice"
+                    type="object"
+                    class="oe_stat_button"
+                    name="open_customer_statement"
+                    icon="fa-list"
+                    invisible="not has_moves or total_all_due == 0"
+                >
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value">
+                            <field
+                                name="total_all_due"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"
+                                invisible="total_all_due == 0 or total_all_overdue == 0"
+                                class="text-danger"
+                            />
+                            <field
+                                name="total_all_due"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"
+                                invisible="total_all_due == 0 or total_all_overdue != 0"
+                            />
+                        </span>
+                        <span class="o_stat_text">Customer Statement</span>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_partner_tree_customer_statements_total_due_groups" model="ir.ui.view">
+        <field name="name">res.partner list customer statements: total_due solo contabilidad</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account_followup.customer_statements_tree_view"/>
+        <field name="priority">40</field>
+        <field name="arch" type="xml">
+            <field name="total_due" position="attributes">
+                <attribute name="groups">account.group_account_basic,account.group_account_readonly,account.group_account_invoice</attribute>
+            </field>
+        </field>
+    </record>
+</odoo>
