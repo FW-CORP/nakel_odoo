@@ -21,13 +21,19 @@ Modos de cantidad (`--qty-mode`):
 
 `--top 0` = sin límite (exporta todos los productos que matcheen el modo).
 
+Salida por defecto (si no pasás ``--out``): ``inventario/correcciones/OUT/`` en la raíz del repo,
+con nombre ``cen_existencias_master_dev_<timestamp>.csv``.
+
 Uso:
   python3 nakel_odoo/tools/inventario/analisis_demanda_vs_negativos_cen_master_dev.py \\
-    --qty-mode zero_or_negative --top 0 --out /tmp/cen_stock_le0.csv
+    --qty-mode zero_or_negative --top 0
 
-  python3 ... --dias 90 --top 80 --sort score --out /tmp/cen_negativos_demanda.csv
+  python3 ... --dias 90 --top 80 --sort score
 
-  python3 ... --qty-mode negative --top 0 --no-demanda --out /tmp/cen_solo_negativos.csv
+  python3 ... --qty-mode negative --top 0 --no-demanda
+
+  # Destino explícito:
+  python3 ... --out /tmp/otro_nombre.csv
 """
 
 from __future__ import annotations
@@ -46,6 +52,12 @@ import xmlrpc.client
 sys.path.insert(0, "/media/klap/raid5/cursor_files")
 
 from config_nakel import ODOO_CONFIG_MASTER_DEV  # noqa: E402
+
+
+def _reports_out_dir() -> Path:
+    """Directorio estándar de informes: inventario/correcciones/OUT (raíz del repo)."""
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    return repo_root / "inventario" / "correcciones" / "OUT"
 
 
 def _csv_num(v: float) -> str:
@@ -302,7 +314,12 @@ def main() -> int:
         action="store_true",
         help="No consultar ventas (CSV solo con qty en ubicación y datos de producto). Más rápido.",
     )
-    ap.add_argument("--out", type=str, default="", help="Ruta CSV de salida")
+    ap.add_argument(
+        "--out",
+        type=str,
+        default="",
+        help="Ruta CSV de salida. Vacío = inventario/correcciones/OUT/cen_existencias_master_dev_<timestamp>.csv",
+    )
     ap.add_argument(
         "--sort",
         choices=("score", "demand", "negative"),
@@ -374,7 +391,12 @@ def main() -> int:
     )
     name_by_id = {int(x["id"]): x for x in names}
 
-    out_path = Path(args.out) if args.out else Path("/tmp") / f"cen_negativos_demanda_{datetime.now():%Y%m%d_%H%M%S}.csv"
+    if args.out.strip():
+        out_path = Path(args.out)
+    else:
+        out_dir = _reports_out_dir()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"cen_existencias_master_dev_{datetime.now():%Y%m%d_%H%M%S}.csv"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     demand_col = f"demanda_ventas_{args.dias}d_c{args.company_id}"

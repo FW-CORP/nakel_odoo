@@ -42,6 +42,11 @@ También en `addons/` (p. ej. permisos / UX): `nakel_sale_margin` — restringe 
 - `tools/arca-retenciones/` (SICORE / SIRCAR / PERCEIIBB + exportador Excel)
   - Se excluyen outputs (`out/`) y artefactos binarios para mantener el repo liviano.
 
+## Diagnóstico fiscal (liquidación / IIBB sufrido)
+
+- `tools/tax_settlement_diagnostico/` — scripts **solo lectura** (XML-RPC): diagnóstico retenciones / acción 1065 y dependencias de módulo. Ver README en esa carpeta.
+- `addons/nakel_fix_iibb_settlement_name/` — parche defensivo (`get_pos_and_number` EE) para `False`/`None` en certificado / nombre; ver `docs/incidentes/IIBB_SUFRIDO_LIQUIDACION_WITHHOLDING_NAME_master_dev.md`.
+
 ## Fixes productivos (rollout)
 
 - `tools/fix-facom/` (**Arreglo FACOM** en facturas de compra)

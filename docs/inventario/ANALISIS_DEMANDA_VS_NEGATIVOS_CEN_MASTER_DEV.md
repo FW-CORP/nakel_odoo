@@ -14,25 +14,34 @@ Archivo:
 
 - `nakel_odoo/tools/inventario/analisis_demanda_vs_negativos_cen_master_dev.py`
 
+**Salida por defecto:** si no pasás `--out`, el CSV se escribe en `inventario/correcciones/OUT/` con nombre `cen_existencias_master_dev_<timestamp>.csv`.
+
 Ejemplo (últimos 90 días, top 100, orden por *score* = demanda × |qty|):
 
 ```bash
 python3 nakel_odoo/tools/inventario/analisis_demanda_vs_negativos_cen_master_dev.py \
-  --dias 90 --top 100 --sort score --out /tmp/cen_negativos_demanda.csv
+  --dias 90 --top 100 --sort score
 ```
 
 **Todos** los productos con `quantity <= 0` en CEN/Existencias (sin límite de filas, sin columna de ventas):
 
 ```bash
 python3 nakel_odoo/tools/inventario/analisis_demanda_vs_negativos_cen_master_dev.py \
-  --qty-mode zero_or_negative --top 0 --no-demanda --out /tmp/cen_stock_le0_completo.csv
+  --qty-mode zero_or_negative --top 0 --no-demanda
 ```
 
 **Todos** los negativos con demanda 90d:
 
 ```bash
 python3 nakel_odoo/tools/inventario/analisis_demanda_vs_negativos_cen_master_dev.py \
-  --qty-mode negative --top 0 --dias 90 --sort score --out /tmp/cen_negativos_demanda_completo.csv
+  --qty-mode negative --top 0 --dias 90 --sort score
+```
+
+Otro destino explícito:
+
+```bash
+python3 nakel_odoo/tools/inventario/analisis_demanda_vs_negativos_cen_master_dev.py \
+  --qty-mode negative --top 0 --out /tmp/mi_informe.csv
 ```
 
 Parámetros útiles:

@@ -127,6 +127,24 @@ python3 crear_ir_rule_partner_preventistas.py --master-dev --apply
 
 **Notas:** los clientes con **vendedor vacío** (`partner_share=True`) siguen fuera salvo otras ramas; los **internos** (`partner_share=False`) son visibles para evitar bloqueos al abrir fichas. Quien **no** tenga el grupo Preventistas **no** queda sujeto a esta regla.
 
+---
+
+## Habilitar creación de contactos (ACL `res.partner`)
+
+Si un preventista ve:
+
+- *“no tiene acceso 'crear' a: Contacto (res.partner)”*
+
+entonces el bloqueo es por **ACL** (`ir.model.access`), no por vista.
+
+Solución aplicada en código (para evitar “tocar usuario por usuario”):
+
+- En el módulo `clientes_cc_detalle` se agregó una ACL que da **R/W/C** (sin borrar) sobre `res.partner`
+  al grupo `nakel_perm_scripts.group_vendedores_preventistas`.
+- Archivo: `nakel_odoo/addons/clientes-cc-detalle/clientes_cc_detalle/security/res_partner_access.xml`
+
+Luego: actualizar módulo `clientes_cc_detalle` en la base y refrescar sesión.
+
 **Actualización dominio (`master_dev`):** 2026-04-11 — rama `user_ids` + **`user_ids any`** + **`id = user.partner_id.id`**. **Tercera actualización** — rama **`partner_share=False`** para no bloquear lecturas indirectas de contactos internos (create/write uid, chatter, etc.). **Cuarta (2026-04-13):** ramas **`sale_order_ids`** / **`commercial_partner_id.sale_order_ids`** (comercial del pedido = usuario) — corrige *AccessError* al **confirmar** pedidos si Odoo lee dirección de envío/facturación o entidad comercial sin `user_id` alineado en la ficha. **Quinta (2026-04-13):** rama **`id in user.company_ids.mapped('partner_id').ids`** — contacto **de la compañía** usado en **`stock.warehouse.partner_id`** al confirmar venta + entregas. **Sexta (2026-04-13):** segunda **`ir.rule` 403** (mismo grupo 102, dominio **OR** respecto a la 402) para **`supplier_rank > 0`** — desbloquea lectura de **proveedores** en `product.supplierinfo` (p. ej. ENERGIZER, AKAPOL) que el motor de stock/compras consulta al confirmar. **Séptima (2026-04-14):** la **403** pasa a **OR interno**: sigue la rama `supplier_rank > 0` **o** partners cuyo `id` está en `user.env['product.supplierinfo'].sudo().search([]).mapped('partner_id').ids` (mismo filtro de compañía), para proveedores con **`supplier_rank = 0`** aún presentes en líneas de compra del producto (caso p. ej. S02253 / DELLEPIANE / REGIONAL).
 
 ---
