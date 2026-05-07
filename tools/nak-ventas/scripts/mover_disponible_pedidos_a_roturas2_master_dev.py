@@ -88,6 +88,32 @@ def _ensure_crm_tag_id(models, db: int, uid: int, password: str, *, name: str, c
     )
 
 
+def _select_orders_by_tag(
+    models,
+    db: int,
+    uid: int,
+    password: str,
+    *,
+    company_nak_id: int,
+    only_draft: bool,
+    must_have_tag_id: int,
+    skip_tag_id: int | None,
+    limit: int | None = None,
+) -> List[str]:
+    dom = [("company_id", "=", int(company_nak_id))]
+    if only_draft:
+        dom.append(("state", "=", "draft"))
+    dom.append(("tag_ids", "in", [int(must_have_tag_id)]))
+    if skip_tag_id is not None:
+        dom.append(("tag_ids", "not in", [int(skip_tag_id)]))
+
+    opts = {"fields": ["name"], "order": "id asc"}
+    if limit:
+        opts["limit"] = int(limit)
+    rows = models.execute_kw(db, uid, password, "sale.order", "search_read", [dom], opts)
+    return [r["name"] for r in rows if r.get("name")]
+
+
 def _resolve_locations(models, db: int, uid: int, password: str, company_id: int) -> Tuple[int, int]:
     def _loc(complete_name: str) -> int:
         recs = models.execute_kw(
@@ -267,6 +293,7 @@ def _needs_by_orders(
     company_nak_id: int,
     only_draft: bool = True,
     skip_tag_id: int | None = None,
+    require_tag_id: int | None = None,
 ) -> Dict[str, Dict[int, float]]:
     """
     Lee líneas de venta solo de cotizaciones NAK: no modifica sale.order.
@@ -303,6 +330,13 @@ def _needs_by_orders(
                 f"Orden {name!r} no está en borrador (state={st!r}). "
                 f"Solo se procesan cotizaciones (draft) de NAK. Confirmá o cancelá manualmente otra lógica si aplica."
             )
+
+        if require_tag_id is not None:
+            tags = so.get("tag_ids") or []
+            if int(require_tag_id) not in [int(t) for t in tags]:
+                print(f"SKIP: Orden {name!r} no tiene tag_id={require_tag_id} (etiqueta requerida).")
+                per_order[name] = {}
+                continue
 
         if skip_tag_id is not None:
             tags = so.get("tag_ids") or []
@@ -384,6 +418,35 @@ def main() -> int:
         help="Lista productos de la cotización con pedido>0 pero stock=0 en CEN/Existencias (no se crea movimiento; es esperado).",
     )
 
+    # Flujo por etiquetas (NAK): "Procesar" -> ejecutar -> marcar "ProcesadaNN"
+    p.add_argument(
+        "--auto-desde-tag-procesar",
+        action="store_true",
+        help="Si no se pasan --orden/--ordenes/--archivo-ordenes, selecciona automáticamente cotizaciones de NAK con el tag 'Procesar' (configurable).",
+    )
+    p.add_argument(
+        "--require-tag-procesar",
+        action="store_true",
+        help="Aun si pasás órdenes por nombre, exige que tengan la etiqueta 'Procesar' (si no, se saltean).",
+    )
+    p.add_argument(
+        "--tag-procesar-name",
+        default="Procesar",
+        help="Nombre exacto de crm.tag para indicar 'a procesar' (default: Procesar). Usar '' para deshabilitar este criterio.",
+    )
+    p.add_argument(
+        "--tag-procesar-id",
+        type=int,
+        default=0,
+        help="ID de crm.tag para indicar 'a procesar' (tiene prioridad sobre --tag-procesar-name). 0 = deshabilitado.",
+    )
+    p.add_argument(
+        "--limit-auto",
+        type=int,
+        default=0,
+        help="Límite de cotizaciones a seleccionar cuando se usa --auto-desde-tag-procesar (0 = sin límite).",
+    )
+
     args = p.parse_args()
     if args.dry_run == args.apply:
         p.error("Elegí exactamente uno: --dry-run o --apply")
@@ -407,8 +470,7 @@ def main() -> int:
             uniq.append(o)
             seen.add(o)
     order_names = uniq
-    if not order_names:
-        p.error("Pasá órdenes con --orden (repetible) o --ordenes CSV")
+    # Nota: si no hay órdenes, puede haber auto-selección por tag (se resuelve tras conectar).
 
     # import config
     cfg_root = os.environ.get("NAKEL_CONFIG_ROOT", "/media/klap/raid5/cursor_files")
@@ -419,6 +481,17 @@ def main() -> int:
     cfg = ODOO_CONFIG_MASTER_DEV
     db, uid, models = _get_xmlrpc_models(cfg)
     password = cfg["password"]
+
+    # Resolver tag "Procesar" (opcional)
+    procesar_tag_id: int | None = None
+    if int(args.tag_procesar_id or 0) > 0:
+        procesar_tag_id = int(args.tag_procesar_id)
+    else:
+        tag_name = (args.tag_procesar_name or "").strip()
+        if tag_name:
+            procesar_tag_id = _resolve_crm_tag_id(models, db, uid, password, name=tag_name)
+            if procesar_tag_id is None and (args.auto_desde_tag_procesar or args.require_tag_procesar):
+                raise RuntimeError(f"No existe crm.tag name={tag_name!r} (requerido para el modo por etiquetas).")
 
     skip_tag_id: int | None = None
     skip_tag_name = (args.skip_tag_name or "").strip()
@@ -438,6 +511,33 @@ def main() -> int:
     picking_type_id = _resolve_internal_picking_type(models, db, uid, password, args.warehouse_code)
 
     only_draft = not args.permitir_venta_confirmada
+
+    if not order_names:
+        if args.auto_desde_tag_procesar:
+            if not procesar_tag_id:
+                raise RuntimeError("auto-desde-tag-procesar requiere --tag-procesar-id o --tag-procesar-name válido.")
+            lim = int(args.limit_auto or 0)
+            order_names = _select_orders_by_tag(
+                models,
+                db,
+                uid,
+                password,
+                company_nak_id=int(args.company_nak),
+                only_draft=only_draft,
+                must_have_tag_id=int(procesar_tag_id),
+                skip_tag_id=skip_tag_id,
+                limit=lim if lim > 0 else None,
+            )
+            if not order_names:
+                print("No hay cotizaciones con tag 'Procesar' para procesar (o ya están marcadas como procesadas).")
+                return 0
+            print(
+                f"Auto-selección por tag: {len(order_names)} orden(es): "
+                f"{', '.join(order_names[:20])}{'…' if len(order_names) > 20 else ''}"
+            )
+        else:
+            p.error("Pasá órdenes con --orden/--ordenes/--archivo-ordenes, o usá --auto-desde-tag-procesar.")
+
     per_order = _needs_by_orders(
         models,
         db,
@@ -447,6 +547,7 @@ def main() -> int:
         company_nak_id=int(args.company_nak),
         only_draft=only_draft,
         skip_tag_id=skip_tag_id,
+        require_tag_id=int(procesar_tag_id) if (args.require_tag_procesar and procesar_tag_id) else None,
     )
 
     print(

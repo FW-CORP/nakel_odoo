@@ -1,0 +1,13 @@
+# Agregar estos jobs al prometheus.yml en 192.168.25.91
+# (dentro del bloque scrape_configs:)
+
+  # Métricas de Odoo (spans/metrics via OTel Collector) + Redis (via redis-exporter)
+  - job_name: 'nakel-otel-collector'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ['192.168.1.88:8889']
+        labels:
+          instance: 'lxc-110'
+          environment: 'production'
+          cliente: 'nakel'

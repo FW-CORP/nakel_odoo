@@ -8,6 +8,14 @@
 
 **Plan A (elegido):** ejecutar el script a mano con `--dry-run` y luego `--apply` cuando corresponda (lista de `S0…` vía `--orden`, `--ordenes` o `--archivo-ordenes`).
 
+### Selección por etiquetas (NAK): `Procesar` → `ProcesadaNN`
+
+Si en NAK usan etiquetas para el circuito, el script puede:
+
+- **Seleccionar automáticamente** cotizaciones draft de NAK con tag **`Procesar`**
+- **Saltar** las que ya tengan **`ProcesadaNN`**
+- En `--apply`, **agregar** `ProcesadaNN` para evitar reprocesos (`--mark-processed`)
+
 **Contexto:** el stock físico a mover vive en **`Nakel SA`**, aunque el pedido “documental” esté en **NAK**:
 
 - Origen: `CEN/Existencias` (`stock.location`, típicamente **id=102**)
@@ -69,6 +77,28 @@ Aplicar (crea **un** `stock.picking` interno por orden, validado):
 
 ```bash
 python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --apply --orden S02202
+```
+
+### Modo “por etiquetas” (recomendado si se usa `Procesar` / `ProcesadaNN`)
+
+Dry-run sobre todas las cotizaciones NAK tagueadas como `Procesar`:
+
+```bash
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py \
+  --dry-run \
+  --auto-desde-tag-procesar \
+  --require-tag-procesar
+```
+
+Aplicar y marcar como procesadas (agrega `ProcesadaNN`):
+
+```bash
+python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py \
+  --apply \
+  --auto-desde-tag-procesar \
+  --require-tag-procesar \
+  --mark-processed \
+  --ensure-tag
 ```
 
 Solo en casos excepcionales: permitir una orden NAK **no** borrador (no recomendado):

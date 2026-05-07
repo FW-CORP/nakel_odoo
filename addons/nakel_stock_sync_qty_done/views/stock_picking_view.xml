@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_form_sync_qty_done" model="ir.ui.view">
+        <field name="name">stock.picking.form.sync.qty.done</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <!-- Add SYNC button near Validate for internal transfers -->
+            <xpath expr="//header//button[@name='button_validate']" position="before">
+                <button
+                    name="action_sync_qty_done_from_quantity"
+                    type="object"
+                    string="SYNC"
+                    class="btn btn-danger"
+                    groups="stock.group_stock_user"
+                    invisible="picking_type_code != 'internal' or state in ('done','cancel')"
+                    help="Copia quantity → qty_done en líneas con qty_done=0. Útil cuando se completó 'Cantidad' pero no impacta al validar."
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>
+
