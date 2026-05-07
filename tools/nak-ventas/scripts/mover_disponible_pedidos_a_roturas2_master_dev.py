@@ -431,8 +431,8 @@ def main() -> int:
     )
     p.add_argument(
         "--tag-procesar-name",
-        default="Procesar",
-        help="Nombre exacto de crm.tag para indicar 'a procesar' (default: Procesar). Usar '' para deshabilitar este criterio.",
+        default="procesar",
+        help="Nombre exacto de crm.tag para indicar 'a procesar' (default: procesar). Usar '' para deshabilitar este criterio.",
     )
     p.add_argument(
         "--tag-procesar-id",
@@ -690,7 +690,7 @@ def main() -> int:
                 {"limit": 2},
             )
             if so_id:
-                # add tag without removing others
+                # add "ProcesadaNN" tag without removing others
                 models.execute_kw(
                     db,
                     uid,
@@ -699,7 +699,21 @@ def main() -> int:
                     "write",
                     [so_id, {"tag_ids": [(4, int(tag_id_to_set))]}],
                 )
-                print(f"APPLY: cotización {oname} marcada con tag_id={tag_id_to_set}")
+                # remove "procesar" tag to avoid confusion in the workflow
+                if procesar_tag_id:
+                    models.execute_kw(
+                        db,
+                        uid,
+                        password,
+                        "sale.order",
+                        "write",
+                        [so_id, {"tag_ids": [(3, int(procesar_tag_id))]}],
+                    )
+                    print(
+                        f"APPLY: cotización {oname} marcada ProcesadaNN (tag_id={tag_id_to_set}) y quitado tag 'procesar' (tag_id={procesar_tag_id})"
+                    )
+                else:
+                    print(f"APPLY: cotización {oname} marcada ProcesadaNN (tag_id={tag_id_to_set})")
 
     return 0
 
