@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="view_sale_order_form_nakel_wave_buttons" model="ir.ui.view">
+    <field name="name">sale.order.form.nakel.wave.buttons</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.view_order_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//div[@name='button_box']" position="inside">
+        <button
+            name="action_nakel_open_wave"
+            type="object"
+            class="oe_stat_button"
+            icon="fa-cubes"
+            invisible="not nakel_wave_batch_id"
+        >
+          <div class="o_stat_info">
+            <span class="o_stat_text">Ola/Wave</span>
+          </div>
+        </button>
+        <button
+            name="action_nakel_open_out_pickings"
+            type="object"
+            class="oe_stat_button"
+            icon="fa-truck"
+        >
+          <div class="o_stat_info">
+            <span class="o_stat_text">OUT</span>
+          </div>
+        </button>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_sale_order_tree_nakel_wave" model="ir.ui.view">
+    <field name="name">sale.order.tree.nakel.wave</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.sale_order_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='partner_id']" position="after">
+        <field name="nakel_wave_batch_id" optional="show"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_sale_order_filter_nakel_wave" model="ir.ui.view">
+    <field name="name">sale.order.search.nakel.wave</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='name']" position="after">
+        <field name="nakel_wave_batch_id"/>
+      </xpath>
+      <xpath expr="//filter[@name='my_sale_orders_filter']" position="after">
+        <separator/>
+        <filter
+            string="Ola asignada (Nakel)"
+            name="nakel_wave_set"
+            domain="[('nakel_wave_batch_id', '!=', False)]"
+        />
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_sale_order_filter_nakel_wave_sale_inherit" model="ir.ui.view">
+    <field name="name">sale.order.search.nakel.wave.sale</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.sale_order_view_search_inherit_sale"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='name']" position="after">
+        <field name="nakel_wave_batch_id"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_sale_order_filter_nakel_wave_quote_inherit" model="ir.ui.view">
+    <field name="name">sale.order.search.nakel.wave.quotation</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.sale_order_view_search_inherit_quotation"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='name']" position="after">
+        <field name="nakel_wave_batch_id"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="action_sale_waves_nakel" model="ir.actions.act_window">
+    <field name="name">Olas/Waves (Nakel)</field>
+    <field name="res_model">stock.picking.batch</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{'create': False}</field>
+  </record>
+
+  <menuitem
+      id="menu_sale_waves_nakel"
+      name="Olas/Waves"
+      parent="sale.sale_menu_root"
+      action="action_sale_waves_nakel"
+      sequence="65"
+  />
+</odoo>

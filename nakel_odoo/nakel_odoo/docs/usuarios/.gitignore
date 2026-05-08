@@ -1,0 +1,17 @@
+# Seguridad: no versionar credenciales ni datos sensibles
+documentacion/CREDENCIALES_Y_IDS_POR_BASE.md
+
+# Reportes generados (pueden contener usuarios, emails, datos operativos)
+reportes/
+
+# Entornos / secretos comunes
+.env
+.env.*
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+

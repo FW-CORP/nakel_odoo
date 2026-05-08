@@ -38,8 +38,9 @@ class AccountMove(models.Model):
                 move.rg5329_base_amount = 0
                 continue
 
-            # Aplicar automáticamente impuestos RG 5329 si corresponde
-            move._auto_apply_rg5329_taxes()
+            # Solo en borrador: evita tocar tax_ids tras publicar (commit EDI / AFIP).
+            if move.state == "draft":
+                move._auto_apply_rg5329_taxes()
 
             base_amount = 0
             perception_amount = 0

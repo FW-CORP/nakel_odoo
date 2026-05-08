@@ -1,0 +1,9 @@
+<!-- Template: report_invoice_with_payments -->
+<!-- Key: account.report_invoice_with_payments -->
+<!-- ID: 778 -->
+
+<t t-name="account.report_invoice_with_payments">
+            <t t-call="account.report_invoice">
+                <t t-set="print_with_payments" t-value="True"/>
+            </t>
+        </t>

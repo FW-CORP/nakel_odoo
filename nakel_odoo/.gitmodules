@@ -1,0 +1,3 @@
+[submodule "usuarios"]
+	path = usuarios
+	url = git@github.com:FW-CORP/Nakel-ACL-PERMS.git

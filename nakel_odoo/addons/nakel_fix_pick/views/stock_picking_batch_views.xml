@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_stock_picking_batch_form_nakel_sync_picked" model="ir.ui.view">
+        <field name="name">stock.picking.batch.form.nakel.sync.picked</field>
+        <field name="model">stock.picking.batch</field>
+        <field name="inherit_id" ref="stock_picking_batch.stock_picking_batch_form"/>
+        <field name="arch" type="xml">
+            <!-- Add a supervisor-friendly SYNC button near Validate -->
+            <xpath expr="//header//button[@name='action_done']" position="before">
+                <button
+                    name="action_nakel_sync_picked_from_quantity"
+                    type="object"
+                    string="SYNC"
+                    class="btn btn-danger"
+                    groups="stock.group_stock_user"
+                    invisible="state in ('done','cancel')"
+                    help="Arregla el progreso (tilde verde) marcando picked=True donde ya hay quantity>0 en las líneas de la ola."
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

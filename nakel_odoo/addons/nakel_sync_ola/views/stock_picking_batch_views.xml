@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_stock_picking_batch_form_nakel_sync_ola" model="ir.ui.view">
+        <field name="name">stock.picking.batch.form.nakel.sync.ola</field>
+        <field name="model">stock.picking.batch</field>
+        <field name="inherit_id" ref="stock_picking_batch.stock_picking_batch_form"/>
+        <field name="priority" eval="36"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header//button[@name='action_done']" position="before">
+                <button
+                    name="action_nakel_sync_ola_full"
+                    type="object"
+                    string="SYNC Ola+OUT"
+                    class="btn-secondary"
+                    groups="stock.group_stock_user"
+                    invisible="state in ('done','cancel')"
+                    help="Sincroniza quantity→qty_done y picked en todos los PICK/OUT de esta ola (batch_id o nakel_wave_batch_id). No valida. Complementa el SYNC de Barcode (nakel_fix_pick) sin reemplazarlo."
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Categoría corta en Ajustes → Usuarios → Derechos de acceso (no queda escondida en "Ventas") -->
+    <record id="module_category_nakel_cc_detalle" model="ir.module.category">
+        <field name="name">Nakel — Cuenta corriente (contacto)</field>
+        <field name="description">CC «mis ventas»: botón en contacto, menú pivote en Ventas y mismo criterio para tableros.</field>
+        <field name="sequence">15</field>
+    </record>
+
+    <record id="group_cc_my_sales" model="res.groups">
+        <field name="name">Nakel: ver CC cliente (mis ventas)</field>
+        <field name="category_id" ref="module_category_nakel_cc_detalle"/>
+        <field name="comment">Botón en contacto + menú Ventas → Órdenes → Cuentas corrientes (mis ventas); dominio invoice_user_id = usuario.</field>
+    </record>
+</odoo>

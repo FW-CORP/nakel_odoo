@@ -32,25 +32,23 @@ class ArRegisterPayment(models.Model):
         related='company_id.currency_id')#default=lambda self: self.env.user.company_id.currency_id
 
     payment_lines = fields.One2many('ar.register.payments.line', 'payment_id', string='Payment Lines')
-    line_ids = fields.Many2many('account.move.line', 'ar_payment_register_move_line_new_rel', 'wizard_id', 'line_id',
+    line_ids = fields.Many2many(comodel_name='account.move.line', relation='ar_payment_register_move_line_new_rel', column1='wizard_id', column2='line_id',
         string="Journal items", readonly=True, copy=False,)
     move_ids = fields.Many2many('account.move', string="Selected Moves", readonly=True)
     #Total Amount to Pay (gross)
     is_executed = fields.Boolean(string="Is Executed", default=False, readonly=True)
-    created_account_payment_ids = fields.Many2many('account.payment', 'ar_register_multi_payments_account_payment_rel', 'ar_register_payments_id', 'account_payment_id',
-        string="Created Payments", readonly=True, copy=False)
+    created_account_payment_ids = fields.Many2many(comodel_name='account.payment', relation='ar_register_multi_payments_account_payment_rel', 
+         column1='ar_register_payments_id', column2='account_payment_id', string="Created Payments", readonly=True, copy=False)
     payment_count = fields.Integer(compute="_compute_payment_count", string="Payments")
 
 
     def create_payment(self):
-        #print("\ncreate_payment()...",self)
         self.ensure_one()
 
         RegisterPayment = self.env['account.payment.register']
         payments = self.env['account.payment']
 
         for line in self.payment_lines:
-
             if not line.amount:
                 continue
 
@@ -61,7 +59,7 @@ class ArRegisterPayment(models.Model):
             wizard = RegisterPayment.with_context(
                 active_model='account.move',
                 active_ids=[line.invoice_id.id],
-                from_ar_custom_payment=True,
+                from_ar_custom_payment=True,  # 🔒 lock mode
             ).create({
                 'payment_date': line.payment_date or self.payment_date,
                 'journal_id': line.journal_id.id,
@@ -75,10 +73,11 @@ class ArRegisterPayment(models.Model):
             #Stop
             #Auto manage fieldsin the create()
             #company_id, currency_id, partner_id, partner_type, payment_type, l10n_ar_net_amount, 
-            #print("Wizard:",wizard)
+            #print("Created Wizard:",wizard)
 
-            # 2. Inject withholding INTO wizard (CRITICAL)
+            # 2. Inject withholding, existing checks/new checks INTO wizard (CRITICAL)
             wizard.write({
+                # Withholdings
                 'l10n_ar_withholding_ids': [
                     (0, 0, {
                         'tax_id': wth.tax_id.id,
@@ -87,22 +86,50 @@ class ArRegisterPayment(models.Model):
                         #'l10n_ar_net_amount': it will auto calculate based on the base_amount and tax_id, no need to set it here.
                     })
                     for wth in line.l10n_ar_withholding_ids if wth.tax_id
-                ]
+                ],
+
+                # Existing checks (M2M)
+                'l10n_latam_move_check_ids': [ (6, 0, line.l10n_latam_move_check_ids.ids) ] if line.l10n_latam_move_check_ids else False,
+
+                # New checks (O2M with mapping)
+                'l10n_latam_new_check_ids': [
+                    (0, 0, {
+                        'name': check_line.name,
+                        'bank_id': check_line.bank_id.id,
+                        'issuer_vat': check_line.issuer_vat,
+                        'payment_date': check_line.payment_date,
+                        'amount': check_line.amount,
+                    })
+                    for check_line in line.l10n_latam_new_check_ids
+                ],
             })
-            #print("\n\n New Wizard:",wizard)
+            #before
+            #for wth_line in line.l10n_ar_withholding_ids:
+            #    print("source wth_line:",wth_line, "base_amount:", wth_line.base_amount, "amount:", wth_line.amount)
+            #for withholding in wizard.l10n_ar_withholding_ids:
+            #    print("new Withholding line:", withholding, "base_amount:", withholding.base_amount, "amount:", withholding.amount)
 
             # 3. Create payment
-            new_payments = wizard._create_payments()
-            #print("\nNew Payments:",new_payments)
+            new_payment = wizard._create_payments()
+            #print("\nNew Payment:",new_payment)
+            # Copy withholding number back to my custom lines
+
+            # ✅ Assign withholding number custom withholding lines
+            if new_payment.l10n_ar_withholding_ids:
+                for line_wth in line.l10n_ar_withholding_ids:
+                    matched = new_payment.l10n_ar_withholding_ids.filtered(lambda aml: aml.tax_line_id == line_wth.tax_id and 
+                        abs(aml.tax_base_amount) == abs(line_wth.base_amount))
+                    if matched:
+                        line_wth.name = matched[0].name
+
             # Tracking purpose
-            line.created_account_payment_id = new_payments.id
-            new_payments.write({
+            line.created_account_payment_id = new_payment.id
+            new_payment.write({
                 'ar_register_payment_id': self.id,
                 'ar_register_payment_line_id': line.id,
             })
 
-
-            payments |= new_payments
+            payments |= new_payment
 
         # 🔥 GENERATE PAYMENT ORDER NUMBER HERE
         if payments and not self.payment_order_number:
@@ -219,16 +246,8 @@ class ArRegisterPaymentsLines(models.Model):
     created_account_payment_id = fields.Many2one('account.payment', string="Created Payment", readonly=True, copy=False)
     company_id = fields.Many2one(related='payment_id.company_id', store=True, copy=False, readonly=True)#compute='_compute_from_lines'
     partner_id = fields.Many2one('res.partner', string='Partner', readonly=True)
-    partner_type = fields.Selection(
-        related='payment_id.partner_type',
-        store=True,
-        readonly=True
-    )
-    payment_type = fields.Selection(
-        related='payment_id.payment_type',
-        store=True,
-        readonly=True
-    )
+    partner_type = fields.Selection(related='payment_id.partner_type', store=True, readonly=True)
+    payment_type = fields.Selection(related='payment_id.payment_type', store=True, readonly=True)
 
     invoice_id = fields.Many2one('account.move', string='Number', required=True)
     move_currency_id = fields.Many2one(related='invoice_id.currency_id', comodel_name='res.currency', string='Document Currency', required=True, help="The currency of the invoice/bill. Used to know in which currency the payment should be registered.")
@@ -298,11 +317,13 @@ class ArRegisterPaymentsLines(models.Model):
         #store=True,
         readonly=False,
         domain="[('journal_id', '=', journal_id)]",
-    )
+    )# _onchange_payment_method added.
     #required=True managed in the view side same as default account.register.payment wizard. 
     #compute='_compute_payment_method_line_id',
     #domain="[('id', 'in', available_payment_method_line_ids)]",
     #available_payment_method_line_ids = fields.Many2many('account.payment.method.line', compute='_compute_available_payment_method_line_ids')
+    payment_method_code = fields.Char(
+        related='payment_method_line_id.code')
 
     @api.onchange('journal_id', 'payment_type')
     def _onchange_payment_method(self):
@@ -368,9 +389,9 @@ class ArRegisterPaymentsLines(models.Model):
             #print("partner_taxes:",partner_taxes)
             #Stop
             payment_line.l10n_ar_withholding_ids = [Command.clear()] + [Command.create({'tax_id': x.tax_id.id}) for x in partner_taxes]
-            #print("payment_line.l10n_ar_withholding_ids:", payment_line.l10n_ar_withholding_ids)
+            print("payment_line.l10n_ar_withholding_ids:", payment_line.l10n_ar_withholding_ids)
 
-    @api.depends('amount', 'l10n_ar_withholding_ids', 'l10n_ar_withholding_ids.amount')
+    @api.depends('amount', 'l10n_ar_withholding_ids.amount', 'l10n_ar_withholding_ids.base_amount', 'l10n_ar_withholding_ids.is_manual')
     def _compute_l10n_ar_amounts(self):
         for line in self:
             total_withholding = sum(line.l10n_ar_withholding_ids.mapped('amount'))
@@ -381,26 +402,57 @@ class ArRegisterPaymentsLines(models.Model):
             #if line.l10n_ar_net_amount < 0:
             #    raise ValidationError("Total Withholding exceeds payment amount.")
 
-    @api.onchange('amount')
+
+    """@api.onchange('amount')# old logic
     def _onchange_payment_amount(self):
+        print("\n_onchange_payment_amount()...from AR",self)
         for line in self:
             for wth in line.l10n_ar_withholding_ids:
-                wth.amount = 0.0
+                # recompute base first (already computed via depends, but safe)
+                wth._compute_base_amount()
+                # recompute withholding amount
+                amount, _, _ = wth._tax_compute_all_helper()
+                print("Recomputed withholding amount:", amount)
+                wth.amount = amount
+                print("Updated withholding line:", wth, "with amount:", wth.amount)"""
+
+    @api.onchange('amount')
+    def _onchange_payment_amount(self):#3.1 #new logic
+        for line in self:
+            for wth in line.l10n_ar_withholding_ids:
+                wth.is_manual = False
 
     @api.onchange('invoice_id',)
     def _onchange_invoice_id(self):
-        #print("_onchange_invoice_id:",self)
+        #print("\n\n_onchange_invoice_id:",self)
         for rec in self:
             rec.partner_id = rec.invoice_id.partner_id
-            #print("rec.partner_id:", rec.partner_id)
             rec.invoice_date = rec.invoice_id.invoice_date
             rec.date_due = rec.invoice_id.invoice_date_due or False
             rec.amount_total = rec.invoice_id.amount_total
-            rec.amount_due = rec.invoice_id.amount_residual
-            rec.amount = rec.invoice_id.amount_residual
+
+            # 🔥 Compute already used amount in this wizard
+            other_lines = rec.payment_id.payment_lines.filtered(
+                lambda l: l.invoice_id == rec.invoice_id and l != rec
+            )
+            already_used = sum(other_lines.mapped('amount'))
+
+            # 🔥 Remaining amount
+            remaining = rec.invoice_id.amount_residual - already_used
+
+            if remaining < 0:
+                remaining = 0.0
+
+            rec.amount_due = remaining
+            rec.amount = remaining
+
             rec.move_currency_id = rec.invoice_id.currency_id
             rec.ref = rec.invoice_id.ref
-            rec.communication = rec.invoice_id.name if rec.invoice_id.move_type in ('out_invoice','out_refund','out_receipt') else rec.invoice_id.ref or rec.invoice_id.name
+            rec.communication = (
+                rec.invoice_id.name
+                if rec.invoice_id.move_type in ('out_invoice','out_refund','out_receipt')
+                else rec.invoice_id.ref or rec.invoice_id.name
+            )
 
     #when i add constrains, auto withholding auto calculation is not working so comment the code.
     """@api.constrains('amount', 'l10n_ar_withholding_ids', 'l10n_ar_withholding_ids.amount')
@@ -412,17 +464,18 @@ class ArRegisterPaymentsLines(models.Model):
                     "Total Withholding (%.2f) exceeds Payment Amount (%.2f)."
                 ) % (total_withholding, line.amount))"""
 
-    @api.onchange('amount', 'l10n_ar_withholding_ids', 'l10n_ar_withholding_ids.amount')
+    @api.onchange('amount', 'l10n_ar_withholding_ids', 'l10n_ar_withholding_ids.amount')#TODO not valid: ['l10n_ar_withholding_ids.amount'] 
     def _onchange_withholding_validation(self):
         for line in self:
             total_withholding = sum(line.l10n_ar_withholding_ids.mapped('amount'))
             if total_withholding > line.amount:
-                return {
-                    'warning': {
-                        'title': "Warning",
-                        'message': "Total Withholding exceeds Payment Amount."
-                    }
-                }
+                return#TODO
+                #return {
+                #    'warning': {
+                #        'title': "Warning",
+                #        'message': "Total Withholding exceeds Payment Amount."
+                #    }
+                #}
 
     def action_open_withholding(self):
         #print("\naction_open_withholding()...from l10n_ar_withholding",self, self.id)
@@ -438,9 +491,39 @@ class ArRegisterPaymentsLines(models.Model):
             'res_id': self.id, 
         }
 
+    l10n_latam_new_check_ids = fields.One2many('latam.payment.register.check', 'payment_line_id', string="New Checks")
+    l10n_latam_move_check_ids = fields.Many2many(
+        comodel_name='l10n_latam.check', relation='ar_register_multi_payments_latam_check_rel', column1='ar_register_payments_line_id', column2='check_id',
+        string='Checks',
+    )
+
+    @api.onchange('l10n_latam_move_check_ids', 'l10n_latam_move_check_ids.amount', 'l10n_latam_new_check_ids', 'l10n_latam_new_check_ids.amount', 'payment_method_code')
+    def _onchange_set_amounts(self):
+        #print("\n\n_onchange_set_amounts()...from AR Payment Lines", self)
+        for wizard in self.filtered(lambda x: x._is_latam_check_payment(check_subtype='new_check')):
+            #print("Updating amount based on new checks... wizard: ",wizard)
+            wizard.amount = sum(wizard.l10n_latam_new_check_ids.mapped('amount'))
+            #print("New check amount total:", wizard.amount)
+        for wizard in self.filtered(lambda x: x._is_latam_check_payment(check_subtype='move_check')):
+            #print("Updating amount based on move checks... wizard: ", wizard)
+            wizard.amount = sum(wizard.l10n_latam_move_check_ids.mapped('amount'))
+            #print("Move check amount total:", wizard.amount)
+
+    def _is_latam_check_payment(self, check_subtype=False):
+        if check_subtype == 'move_check':
+            codes = ['in_third_party_checks', 'out_third_party_checks', 'return_third_party_checks']
+        elif check_subtype == 'new_check':
+            codes = ['new_third_party_checks', 'own_checks']
+        else:
+            codes = ['in_third_party_checks', 'out_third_party_checks', 'return_third_party_checks', 'new_third_party_checks', 'own_checks']
+        return self.payment_method_code in codes
+
+
+# ar.payment.register.withholding = l10n_ar.payment.register.withholding:
 class ArPaymentRegisterWithholding(models.Model):
     _name = 'ar.payment.register.withholding'
     _description = 'AR Payment register withholding lines'
+    _rec_name = 'tax_id'
     _check_company_auto = True
 
     #ref : l10n_ar_withholding/wizards/l10n_ar_payment_register_withholding.py
@@ -455,15 +538,38 @@ class ArPaymentRegisterWithholding(models.Model):
         #domain="[('l10n_ar_withholding_payment_type', '=', parent.payment_id.partner_type)]"
     withholding_sequence_id = fields.Many2one(related='tax_id.l10n_ar_withholding_sequence_id')
     base_amount = fields.Monetary(compute='_compute_base_amount', store=True, readonly=False)
-    #amount = fields.Monetary(compute='_compute_amount', store=True, readonly=False)
-    amount = fields.Monetary(store=True, readonly=False)
+    #amount = fields.Monetary(store=True, readonly=False)
+    amount = fields.Monetary(compute='_compute_amount', store=True, readonly=False)#3.1
+    is_manual = fields.Boolean(string="Manual Override", readonly=True, default=False)#3.1
 
-    @api.onchange('base_amount', 'tax_id')
-    def _onchange_amount(self):
+
+    @api.depends('base_amount', 'tax_id', 'payment_line_id.amount')
+    def _compute_amount(self):#3.1
+        #print("\n_compute_amount()...from AR withholding amount",self)
         for line in self:
-            #if line.tax_id:
-            if line.tax_id and not line.amount:
+            # 🟡 Skip auto if user manually edited
+            if line.is_manual:
+                continue #it's called on Save.
+            if not line.tax_id:
+                line.amount = 0.0
+            else:
                 line.amount = line._tax_compute_all_helper()[0]
+
+    @api.onchange('amount')
+    def _onchange_amount_manual(self):#3.1
+        for rec in self:
+            if rec.tax_id:
+                rec.is_manual = True
+
+    """@api.onchange('base_amount', 'tax_id')
+    def _onchange_amount(self):#old logic
+        print("\n_onchange_amount()...from AR",self)
+        for line in self:
+            #if line.tax_id and not line.amount:
+            if line.tax_id:
+                #line.amount = line._tax_compute_all_helper()[0]
+                amount, _, _ = line._tax_compute_all_helper()
+                line.amount = amount"""
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -475,6 +581,7 @@ class ArPaymentRegisterWithholding(models.Model):
         return records
 
     def _tax_compute_all_helper(self):
+        #print("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@_tax_compute_all_helper()...from AR",self)
         self.ensure_one()
         # Computes the withholding tax amount provided a base and a tax
         # It is equivalent to: amount = self.base * self.tax_id.amount / 100
@@ -539,34 +646,12 @@ class ArPaymentRegisterWithholding(models.Model):
             tax_amount = 0.0
         return tax_amount, tax_account_id, tax_repartition_line_id
 
-    @api.depends('base_amount', 'tax_id')
-    def _compute_amount(self):
-        for line in self:
-            if not line.tax_id:
-                line.amount = 0.0
-            else:
-                line.amount = line._tax_compute_all_helper()[0]
 
-    """@api.depends('payment_line_id.amount', 'payment_line_id.payment_id.line_ids', 'tax_id')
-    def _compute_base_amount(self):
-        print("\n _compute_base_amount() from AR",self)
-        for wth in self:
-            if wth.tax_id.l10n_ar_tax_type == 'iibb_total':
-                wth.base_amount = wth.payment_line_id.amount
-            else:
-                wth.base_amount = wth.payment_line_id.amount * sum(wth.payment_line_id.payment_id.line_ids.mapped('move_id.amount_untaxed')) / sum(wth.payment_line_id.payment_id.line_ids.mapped("move_id.amount_total"))
-                total = sum(wth.payment_line_id.payment_id.line_ids.mapped("move_id.amount_total"))
-                if not total:
-                    wth.base_amount = 0.0
-                else:
-                    wth.base_amount = (
-                        wth.payment_line_id.amount *
-                        sum(wth.payment_line_id.payment_id.line_ids.mapped('move_id.amount_untaxed'))
-                        / total
-                    )"""
     @api.depends('payment_line_id.amount', 'payment_line_id.payment_id.line_ids', 'tax_id')
     def _compute_base_amount(self):
+        #print("\n _compute_base_amount()...Custom", self)
         for wth in self:
+            #print("wth Line:", wth, "tax_id:", wth.tax_id)
             payment_line = wth.payment_line_id
             payment = payment_line.payment_id
 
@@ -580,8 +665,16 @@ class ArPaymentRegisterWithholding(models.Model):
                 continue
 
             # Compute totals safely
-            total_amount = sum(payment.line_ids.mapped('move_id.amount_total'))
-            untaxed_amount = sum(payment.line_ids.mapped('move_id.amount_untaxed'))
+            #print("payment.line_ids:",payment.line_ids)
+            #expect only one move line. it's a singleton.
+            #total_amount = sum(payment.line_ids.mapped('move_id.amount_total'))
+            amline = payment.line_ids.filtered(lambda aml: aml.move_id == payment_line.invoice_id)
+            total_amount = amline.move_id.amount_total if amline else 0.0
+            #print("total_amount:", total_amount)
+            
+            #untaxed_amount = sum(payment.line_ids.mapped('move_id.amount_untaxed'))
+            untaxed_amount = amline.move_id.amount_untaxed if amline else 0.0
+            #print("untaxed_amount:", untaxed_amount)
 
             # 🔴 CRITICAL FIX
             if not total_amount:
@@ -592,7 +685,22 @@ class ArPaymentRegisterWithholding(models.Model):
             wth.base_amount = (
                 payment_line.amount * untaxed_amount / total_amount
             )
+            #total_amount 11,168,769.05      payment_line.amount 11,168,469.05
+            #untaxed_amount 9,007,071.96        ?  9006830.02
+            #print("wth.base_amount:", wth.base_amount ,"\n---")
 
 
-# ar.payment.register.withholding = l10n_ar.payment.register.withholding:
+    """@api.depends('payment_line_id.amount', 'payment_line_id.payment_id.line_ids', 'tax_id')
+    def _compute_base_amount(self):
+        for wth in self:
+            if wth.tax_id.l10n_ar_tax_type == 'iibb_total':
+                wth.base_amount = wth.payment_line_id.amount
+            else:
+                #wth.base_amount = wth.payment_line_id.amount * sum(wth.payment_line_id.payment_id.line_ids.mapped('move_id.amount_untaxed')) / sum(wth.payment_line_id.payment_id.line_ids.mapped('move_id.amount_total'))
+                total = sum(wth.payment_line_id.payment_id.line_ids.mapped('move_id.amount_total'))
+                if not total:
+                    wth.base_amount = 0.0
+                else:
+                    wth.base_amount = (wth.payment_line_id.amount * sum(wth.payment_line_id.payment_id.line_ids.mapped('move_id.amount_untaxed')) / total)"""
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

@@ -17,12 +17,25 @@ venv/
 **/out/
 **/reportes/
 **/backups/
+**/dumps/
+**/*.dump
+**/*.bak
+**/*.backup
+**/*.sql
+**/*.sql.gz
+**/*.pgdump
 
 # Secrets / local config
 .env
 .env.*
 config_nakel.py
 config_*.py
+
+# Backup local de addons productivos (no versionar)
+nakel_odoo/addons/addons-Prod/
+
+# Evitar repos legacy embebidos en QWeb
+qweb/trash/legacy_repo/QWeb-Modelos-templates/
 
 # OS / editor
 .DS_Store

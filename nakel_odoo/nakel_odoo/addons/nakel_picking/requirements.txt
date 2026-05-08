@@ -1,0 +1,7 @@
+# Python dependencies for nakel_picking module
+
+# Required for barcode generation in PDF reports
+python-barcode[images]>=0.15.1
+
+# Alternative: reportlab (usually already included in Odoo)
+# reportlab>=3.6.0

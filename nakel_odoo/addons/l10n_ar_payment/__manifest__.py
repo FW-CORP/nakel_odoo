@@ -8,9 +8,8 @@
     'author': 'OMAX Informatics',
     'website': 'https://www.omaxinformatics.com',
     'description' : '''
-        Mass Payment Registration flow including Withholding and Payment Order Histroy - Argentina
     ''',
-    'depends' : ['account', 'l10n_ar', 'l10n_ar_withholding',],
+    'depends' : ['account', 'l10n_ar','l10n_latam_check', 'l10n_ar_withholding',],
     'data': [
         'security/ir.model.access.csv',
         'data/ir_sequence.xml',

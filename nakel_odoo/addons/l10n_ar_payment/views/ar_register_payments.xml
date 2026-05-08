@@ -25,7 +25,7 @@
                     <group>
                         <group>
                             <field name="partner_id" options="{'no_create': True, 'no_open': True}"/>
-                            <field name="move_ids" widget="many2many_tags" options="{'no_create': True, 'no_open': True}" invisible="1"/>
+                            <field name="move_ids" widget="many2many_tags" options="{'no_create': True, 'no_open': True}" invisible="0" readonly="0"/>
                             <field name="created_account_payment_ids" widget="many2many_tags" options="{'no_create': True, 'no_open': True}" invisible="1"/>
                         </group>
                         <group>
@@ -58,11 +58,12 @@
                                         <field name="journal_id" required="1" options="{'no_create': True, 'no_open': True}"/>
                                         <field name="available_journal_ids" widget="many2many_tags" column_invisible="1"/>
                                         <field name="payment_method_line_id" required="1" force_save="1" options="{'no_create': True, 'no_open': True}"/>
+                                        <field name="payment_method_code" invisible="1" optional="hide"/>
                                         <field name="amount_total" force_save="1" optional="show" /><!--sum="amount_total"-->
                                         <field name="amount_due" force_save="1" optional="show" /><!--sum="amount_due"-->
                                         <field name="amount" optional="show" sum="amount"/>
                                         <field name="currency_id" optional="hide"/>
-                                        <field name="l10n_ar_withholding_amount_total" optional="show" sum="l10n_ar_withholding_amount_total"/>
+                                        <field name="l10n_ar_withholding_amount_total" optional="show" sum="l10n_ar_withholding_amount_total"/><!--force_save="1" not working-->
                                         <field name="l10n_ar_net_amount" optional="show" sum="l10n_ar_net_amount"/>
                                         <field name="communication" optional="show"/>
                                         <field name="created_account_payment_id" optional="hide"/>
@@ -75,11 +76,12 @@
                                     </list>
                                 </field>
                             </group>
-                            <group>
-                                <field name="line_ids" invisible="1"/>
-                            </group>
                         </page>
+                        <group>
+                            <field name="line_ids" invisible="1"/>
+                        </group>
                     </notebook>
+                    <field name="line_ids" widget="one2many_tags" options="{'no_create': True}" invisible="1"/>
                 </sheet>
            </form>
         </field>
@@ -90,16 +92,54 @@
         <field name="model">ar.register.payments</field>
         <field name="arch" type="xml">
             <list string="AR Register Payments" default_order="payment_order_number desc" create="false">
+                <field name="id" optional="hide"/>
+                <field name="create_date" optional="hide"/>
                 <field name="payment_order_number"/>
                 <!--field name="name"/-->
                 <field name="partner_id"/>
+                <field name="payment_date"/>
                 <field name="partner_type"/>
                 <field name="payment_type"/>
-                <field name="payment_date"/>
                 <!--field name="company_id" optional="show"/>
                 <field name="move_ids" widget="many2many_tags"/-->
                 <!--field name="company_currency_id"/-->
             </list>
+        </field>
+    </record>
+
+    <record id="view_ar_register_payments_search" model="ir.ui.view">
+        <field name="name">ar.register.payments.search</field>
+        <field name="model">ar.register.payments</field>
+        <field name="arch" type="xml">
+            <search string="Search AR Register Payments">
+                <!-- 🔍 Quick Search -->
+                <field name="payment_order_number" string="Payment Order"/>
+                <field name="partner_id"/>
+                <field name="payment_date"/>
+
+                <!-- 🔎 Filters -->
+                <filter name="filter_customer" string="Customer" domain="[('partner_type', '=', 'customer')]"/>
+                <filter name="filter_vendor" string="Vendor" domain="[('partner_type', '=', 'supplier')]"/>
+                <separator/>
+                <filter name="filter_inbound" string="Inbound (Receive)" domain="[('payment_type', '=', 'inbound')]"/>
+                <filter name="filter_outbound" string="Outbound (Send)" domain="[('payment_type', '=', 'outbound')]"/>
+                <separator/>
+
+                <filter name="filter_has_payments" string="With Payments" domain="[('created_account_payment_ids', '!=', False)]"/>
+                <filter name="filter_no_payments" string="Without Payments" domain="[('created_account_payment_ids', '=', False)]"/>
+                <separator/>
+                <field name="company_id"/>
+
+                <!-- 📊 Group By -->
+                <group expand="0" string="Group By">
+                    <filter name="group_partner" string="Partner" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_payment_type" string="Payment Type" context="{'group_by': 'payment_type'}"/>
+                    <filter name="group_partner_type" string="Customer/Vendor" context="{'group_by': 'partner_type'}"/>
+                    <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
+                    <filter name="group_date" string="Payment Date" context="{'group_by': 'payment_date'}"/>
+                    <!--filter name="group_executed" string="Execution Status" context="{'group_by': 'is_executed'}"/-->
+                </group>
+            </search>
         </field>
     </record>
 
@@ -184,6 +224,7 @@
                             <field name="payment_date" readonly="is_executed"/>
                             <field name="journal_id" required="1" options="{'no_create': True}" readonly="is_executed" />
                             <field name="payment_method_line_id" required="1" options="{'no_create': True, 'no_open': True}" readonly="is_executed"/>
+                            <field name="payment_method_code" invisible="0"/>
                         </group>
                         <group>
                             <field name="communication" readonly="is_executed"/>
@@ -198,12 +239,46 @@
                         </group>
                     </group>
 
-                    <!-- Withholding Section -->
                     <notebook>
+                        <!-- Checks Section -->
+                        <page name="latam_checks_page" string="Checks" invisible="payment_method_code not in ['in_third_party_checks', 'out_third_party_checks', 
+                            'return_third_party_checks', 'new_third_party_checks', 'own_checks']">
+                            <group name="latam_checks" colspan="2">
+                                <field name="l10n_latam_new_check_ids" invisible="payment_method_code not in ['new_third_party_checks', 'own_checks']" nolabel="1" colspan="2" readonly="is_executed">
+                                    <list editable="bottom">
+                                        <field name="company_id" column_invisible="True"/>
+                                        <field name="currency_id" column_invisible="True"/>
+                                        <field name="name" />
+                                        <field name="bank_id" column_invisible="parent.payment_method_code == 'own_checks'"/>
+                                        <field name="issuer_vat" column_invisible="parent.payment_method_code == 'own_checks'"/>
+                                        <field name="payment_date"/>
+                                        <field name="amount" />
+                                    </list>
+                                </field>
+                                <field name="l10n_latam_move_check_ids" invisible="payment_method_code not in ['in_third_party_checks', 'out_third_party_checks', 'return_third_party_checks']"
+                                    domain="
+                                        [('payment_method_code', '=', 'new_third_party_checks'), ('current_journal_id', '=', journal_id), ('company_id', '=', company_id)]
+                                            if payment_type == 'outbound' else
+                                        [('payment_method_code', '=', 'new_third_party_checks'), ('current_journal_id', '=', False), ('company_id', '=', company_id)]" options="{'no_create': True}"
+                                        nolabel="1" colspan="2" readonly="is_executed">
+                                    <list name="existing_checks">
+                                        <field name="company_id" column_invisible="True"/>
+                                        <field name="currency_id" column_invisible="True"/>
+                                        <field name="name" />
+                                        <field name="bank_id" optional="hide"/>
+                                        <field name="issuer_vat" optional="hide"/>
+                                        <field name="payment_date" optional="show"/>
+                                        <field name="amount"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <!-- Withholding Section -->
                         <page string="Withholdings" ><!--invisible="not l10n_ar_withholding_ids"-->
                             <field name="l10n_ar_withholding_ids" nolabel="1" readonly="is_executed">
                                 <list editable="bottom">
                                     <field name="id" optional="hide"/>
+                                    <field name="is_manual" column_invisible="True" force_save="1"/>
                                     <field name="payment_line_id" column_invisible="1"/>
                                     <field name="withholding_sequence_id" column_invisible="True"/>
                                     <field name="company_id" column_invisible="True"/>
@@ -232,22 +307,55 @@
         <field name="name">ar.payment.register.withholding.form</field>
         <field name="model">ar.payment.register.withholding</field>
         <field name="arch" type="xml">
-            <form>
+            <form string="Withholding">
                 <sheet>
+                    <!-- Header Info -->
                     <group>
-                        <field name="payment_line_id" readonly="1"/>
-                        <!-- add withholding fields -->
+                        <group>
+                            <field name="payment_line_id" invisible="1" readonly="1"/>
+                            <field name="company_id" readonly="1"/>
+                            <field name="currency_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="tax_id" options="{'no_create': True}"/>
+                            <field name="withholding_sequence_id" readonly="1"/>
+                            <field name="name" readonly="withholding_sequence_id"/>
+                        </group>
                     </group>
+
+                    <!-- Calculation Section -->
+                    <group string="Calculation">
+                        <group>
+                            <field name="base_amount" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="amount" readonly="1"/>
+                            <field name="is_manual"/>
+                        </group>
+                    </group>
+
+                    <!-- Info Note -->
+                    <group>
+                        <div colspan="2">
+                            <span class="o_form_label">Note:</span>
+                            <p>
+                                The withholding amount is automatically calculated based on the payment amount and tax configuration.
+                            </p>
+                        </div>
+                    </group>
+
                 </sheet>
             </form>
         </field>
     </record>
+
     <record id="view_ar_payment_register_withholding_tree" model="ir.ui.view">
         <field name="name">ar.payment.register.withholding.tree</field>
         <field name="model">ar.payment.register.withholding</field>
         <field name="arch" type="xml">
             <list>
                 <field name="payment_line_id"/>
+
                 <!-- add your fields -->
             </list>
         </field>

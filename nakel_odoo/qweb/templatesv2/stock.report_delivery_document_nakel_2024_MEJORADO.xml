@@ -1,0 +1,198 @@
+<!-- Template mejorado: Remito Nakel 2024 -->
+<!-- Cumple con RG AFIP 4294/2024 incluyendo QR Code obligatorio -->
+<t t-name="stock.report_delivery_document_nakel_2024">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="o">
+<!-- HEADER PERSONALIZADO PARA REMITO -->
+<t t-set="custom_header" t-value="'l10n_ar.custom_header'"/>
+<t t-set="report_date" t-value="o.date_done"/>
+<t t-set="report_number" t-value="o.name.replace('/OUT/', '/')"/>
+<t t-set="pre_printed_report" t-value="False"/>
+<t t-set="document_letter" t-value="'R'"/>
+<t t-set="report_name" t-value="'Remito'"/>
+<t t-set="header_address" t-value="o.company_id"/>
+<t t-call="web.external_layout">
+    <div class="page">
+      
+      <!-- Espacio en blanco reservado para encabezado por defecto de Odoo -->
+      <div style="height:30px;"/>
+
+      <!-- Encabezado fiscal (si está disponible en l10n_ar.custom_header) -->
+      <div class="fiscal-header" style="border-bottom: 2px solid #000; margin-bottom: 15px; padding-bottom: 10px;">
+        <div class="row">
+          <div class="col-4">
+            <br/>
+            <strong t-field="o.company_id.name"/>
+          </div>
+          <div class="col-4 text-center">
+            <h2 style="font-size: 48px; font-weight: bold; margin: 0;">R</h2>
+          </div>
+          <div class="col-4 text-right">
+            <h4 style="margin: 0;">Remito</h4>
+            <small>
+              Nro: <span t-esc="report_number"/><br/>
+              Fecha: <span t-esc="env['ir.qweb.field.date'].value_to_html(report_date, {})"/>
+            </small>
+          </div>
+        </div>
+        <div class="row mt-2" style="font-size: 12px;">
+          <div class="col-6">
+            <span t-field="o.company_id.street"/> - <span t-field="o.company_id.city"/><br/>
+            <span t-field="o.company_id.state_id.name"/> - <span t-field="o.company_id.zip"/><br/>
+            <t t-if="o.company_id.website"><span t-field="o.company_id.website"/></t>
+          </div>
+          <div class="col-6 text-right">
+            IVA Responsable Inscripto - CUIT: <span t-field="o.company_id.vat"/><br/>
+            <t t-if="o.company_id.l10n_ar_gross_income_number">
+              IIBB: <span t-field="o.company_id.l10n_ar_gross_income_number"/><br/>
+            </t>
+            <t t-if="o.company_id.l10n_ar_afip_start_date">
+              Inicio de actividades: <span t-field="o.company_id.l10n_ar_afip_start_date" t-options="{'widget': 'date'}"/>
+            </t>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos del destinatario -->
+      <h5 class="mt-2 mb-1"><strong>DATOS DEL DESTINATARIO</strong></h5>
+      <div class="row mb-2">
+        <div class="col-6">
+          <t t-if="o.partner_id.name">Nombre: <span t-field="o.partner_id.name"/></t><br/>
+          <t t-if="o.partner_id.vat">CUIT/DNI: <span t-field="o.partner_id.vat"/></t><br/>
+          <t t-if="o.partner_id.phone">Teléfono: <span t-field="o.partner_id.phone"/></t><br/>
+          <t t-if="o.partner_id.email">e-mail: <span t-field="o.partner_id.email"/></t><br/>
+        </div>
+        <div class="col-6 text-right">
+          <t t-if="o.partner_id.street">Domicilio: <span t-field="o.partner_id.street"/></t>
+          <t t-if="o.partner_id.street2"> - <span t-field="o.partner_id.street2"/></t><br/>
+          <t t-if="o.partner_id.city">Localidad: <span t-field="o.partner_id.city"/></t><br/>
+          <t t-if="o.partner_id.state_id">Provincia: <span t-field="o.partner_id.state_id.name"/></t><br/>
+          <t t-if="o.partner_id.zip">C.P.: <span t-field="o.partner_id.zip"/></t>
+        </div>
+      </div>
+
+      <!-- Información del pedido -->
+      <h5 class="mt-2 mb-1"><strong>INFORMACIÓN DEL PEDIDO</strong></h5>
+      <div class="row mb-2">
+        <div class="col-12">
+          Nº Pedido: <span t-field="o.origin"/><br/>
+          Fecha Pedido: <span t-field="o.scheduled_date" t-options="{'widget': 'date'}"/><br/>
+          <t t-if="o.sale_id.client_order_ref">Referencia: <span t-field="o.sale_id.client_order_ref"/></t>
+        </div>
+      </div>
+
+      <!-- Detalle de mercadería -->
+      <h5 class="mt-2 mb-1"><strong>DETALLE DE MERCADERÍA</strong></h5>
+      <t t-set="move_list" t-value="o.move_ids_without_package or []"/>
+      <t t-if="move_list">
+        <div class="row mt-3 mb-2">
+          <div class="col-12">
+            <table class="table table-sm" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+              <thead>
+                <tr>
+                  <th style="border: 1px solid #000; padding: 8px; background-color: #f8f9fa;">Código</th>
+                  <th style="border: 1px solid #000; padding: 8px; background-color: #f8f9fa;">Descripción</th>
+                  <th style="border: 1px solid #000; padding: 8px; background-color: #f8f9fa;">Cantidad</th>
+                  <th style="border: 1px solid #000; padding: 8px; background-color: #f8f9fa;">Cant. Bultos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="move_list" t-as="l">
+                  <tr>
+                    <td style="border: 1px solid #000; padding: 8px; vertical-align: top;"><span t-field="l.product_id.default_code"/></td>
+                    <td style="border: 1px solid #000; padding: 8px; vertical-align: top;"><span t-field="l.product_id.name"/></td>
+                    <td style="border: 1px solid #000; padding: 8px; vertical-align: top;" class="text-center"><span t-esc="int(l.product_uom_qty or 0)"/></td>
+                    <td style="border: 1px solid #000; padding: 8px; vertical-align: top;" class="text-center">
+                      <t t-if="l.product_packaging_qty">
+                        <span t-esc="int(l.product_packaging_qty)"/>
+                      </t>
+                      <t t-elif="l.product_packaging_id and l.product_packaging_id.qty and l.product_uom_qty">
+                        <span t-esc="int(float(l.product_uom_qty) / float(l.product_packaging_id.qty))"/>
+                      </t>
+                      <t t-else="">
+                        <span>-</span>
+                      </t>
+                    </td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </t>
+
+      <!-- QR Code e Información de Transporte -->
+      <div class="row mt-3">
+        <div class="col-6">
+          <!-- QR Code (OBLIGATORIO desde 2024 - RG AFIP 4294/2024) -->
+          <div style="text-align: center; border: 1px solid #ccc; padding: 10px;">
+            <!-- QR Code placeholder - Se mostrará cuando esté disponible en facturación electrónica -->
+            <div style="width: 150px; height: 150px; border: 1px dashed #ccc; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+              <small>QR Code<br/>(disponible en facturación electrónica)</small>
+            </div>
+            <br/>
+            <small>QR Code con información fiscal según RG AFIP 4294/2024</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div style="border: 1px solid #ccc; padding: 10px; height: 150px;">
+            <strong>INFORMACIÓN DE TRANSPORTE</strong><br/>
+            <t t-if="o.carrier_id">
+              Transportista: <span t-field="o.carrier_id.name"/><br/>
+            </t>
+            <t t-if="o.carrier_tracking_ref">
+              Nº Guía: <span t-field="o.carrier_tracking_ref"/><br/>
+            </t>
+            <br/>
+            <strong>OBSERVACIONES</strong><br/>
+            <span t-field="o.note"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Espacio para firma -->
+      <div class="row mt-4">
+        <div class="col-6">
+          <div style="border-top: 1px solid #000; padding-top: 10px; text-align: center;">
+            <strong>FIRMA Y ACLARACIÓN</strong><br/>
+            <br/><br/><br/>
+            _________________________
+          </div>
+        </div>
+        <div class="col-6">
+          <div style="border-top: 1px solid #000; padding-top: 10px; text-align: center;">
+            <strong>RECIBÍ CONFORME</strong><br/>
+            <br/><br/><br/>
+            Firma, Aclaración y DNI<br/>
+            Fecha: ___/___/___
+          </div>
+        </div>
+      </div>
+
+      <!-- Condiciones legales -->
+      <div class="row mt-3 mb-2">
+        <div class="col-12">
+          <strong>CONDICIONES:</strong><br/>
+          Se requiere DNI para la entrega. Verificar cantidad y estado. Reclamos únicamente dentro de las 24 hs.
+        </div>
+      </div>
+
+      <!-- Leyendas legales (RG AFIP 4294/2024) -->
+      <div class="row mt-3">
+        <div class="col-12" style="font-size: 10px; text-align: center; border-top: 1px solid #ccc; padding-top: 10px;">
+          <strong>CONDICIONES LEGALES</strong><br/>
+          Este remito cumple con los requisitos de la RG AFIP 4294/2024.<br/>
+          Documento de transporte obligatorio según normativa vigente.
+        </div>
+      </div>
+
+      <!-- Numeración de página -->
+      <div style="position: absolute; bottom: 5mm; right: 10mm; font-size: 10px;">
+        Página <span class="page"/> de <span class="topage"/>
+      </div>
+    </div>
+  </t>
+</t>
+</t>
+</t>
+

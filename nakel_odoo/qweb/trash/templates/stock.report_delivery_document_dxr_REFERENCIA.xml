@@ -1,0 +1,142 @@
+<!-- Template de referencia: stock.report_delivery_document_dxr -->
+<!-- Este es un template funcional de remito argentino que sirve como base -->
+<t t-name="stock.report_delivery_document_dxr"> 
+<t t-call="web.html_container"> 
+<t t-foreach="docs" t-as="o"> 
+<!-- HEADER PERSONALIZADO PARA REMITO --> 
+<t t-set="custom_header" t-value="'l10n_ar.custom_header'"/> 
+<t t-set="report_date" t-value="o.date_done"/> 
+<t t-set="report_number" t-value="o.name.replace('/OUT/', '/')"/> 
+<t t-set="pre_printed_report" t-value="False"/> 
+<t t-set="document_letter" t-value="'R'"/> 
+<t t-set="report_name" t-value="'Remito'"/> 
+<t t-set="header_address" t-value="o.company_id"/> 
+<t t-call="web.external_layout">
+    <div class="page">
+      
+      <!-- Espacio en blanco reservado para encabezado por defecto de Odoo -->
+      <div style="height:30px;"/>
+
+      <!-- Datos del destinatario -->
+      <h5 class="mt-2 mb-1"><strong>DATOS DEL DESTINATARIO</strong></h5>
+        <div class="row mb-2">
+          <div class="col-6">
+            <t t-if="o.partner_id.name">Nombre: <span t-field="o.partner_id.name"/></t><br/>
+            <t t-if="o.partner_id.vat">CUIT/DNI: <span t-field="o.partner_id.vat"/></t><br/>
+            <t t-if="o.partner_id.phone">Teléfono: <span t-field="o.partner_id.phone"/></t><br/>
+            <t t-if="o.partner_id.email">e-mail: <span t-field="o.partner_id.email"/></t><br/>
+          </div>
+          <div class="col-6 text-right">
+            <t t-if="o.partner_id.street">Domicilio: <span t-field="o.partner_id.street"/></t>
+            <t t-if="o.partner_id.street2"> - <span t-field="o.partner_id.street2"/></t><br/>
+            <t t-if="o.partner_id.city">Localidad: <span t-field="o.partner_id.city"/></t><br/>
+            <t t-if="o.partner_id.state_id">Provincia <span t-field="o.partner_id.state_id.name"/></t><br/>
+            <t t-if="o.partner_id.zip">C.P.: <span t-field="o.partner_id.zip"/></t>
+          </div>
+        </div>
+
+      <!-- Espacio en blanco reservado para encabezado por defecto de Odoo -->
+      <div style="height:15px;"/>
+
+      <!-- Información del pedido -->
+      <h5 class="mt-2 mb-1"><strong>INFORMACIÓN DEL PEDIDO</strong></h5>
+      <div class="row mb-2">
+        <div class="col-12">
+          Nº Pedido: <span t-field="o.origin"/><br/>
+          Fecha Pedido: <span t-field="o.scheduled_date" t-options="{'widget': 'date'}"/><br/>
+          <t t-if="o.sale_id.client_order_ref">Referencia: <span t-field="o.sale_id.client_order_ref"/></t>
+        </div>
+      </div>
+
+      <!-- Espacio en blanco reservado para encabezado por defecto de Odoo -->
+      <div style="height:30px;"/>
+
+      <!-- Detalle de mercadería -->
+      <h5 class="mt-2 mb-1"><strong>DETALLE DE MERCADERÍA</strong></h5>
+        <div class="row mt-3 mb-2">
+          <div class="col-12">
+            <table style="border-collapse: collapse; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="border: none !important;">Código</th>
+                  <th style="border: none !important;">Descripción</th>
+                  <th style="border: none !important;">Cantidad</th>
+                  <th style="border: none !important;">Lote</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="o.move_ids_without_package" t-as="l">
+                  <tr>
+                    <td style="border: none !important;"><span t-field="l.product_id.default_code"/></td>
+                    <td style="border: none !important;"><span t-field="l.product_id.name"/></td>
+                    <td style="border: none !important;" class="text-center">
+                        <span t-esc="int(l.product_uom_qty)"/>
+                    </td>
+                    <td style="border: none !important;">
+                        <t t-if="l.lot_ids">
+                            <span t-esc="l.lot_ids[0].name"/>
+                        </t>
+                    </td>
+                  </tr>
+                </t>
+                <!-- Espacio para más filas visuales -->
+                <tr>
+                  <td style="border: none !important;"> </td><td style="border: none !important;"/><td style="border: none !important;"/><td style="border: none !important;"/>
+                </tr>
+                <tr>
+                  <td style="border: none !important;"> </td><td style="border: none !important;"/><td style="border: none !important;"/><td style="border: none !important;"/>
+                </tr>
+                <tr>
+                  <td style="border: none !important;"> </td><td style="border: none !important;"/><td style="border: none !important;"/><td style="border: none !important;"/>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      <!-- Espacio en blanco reservado para encabezado por defecto de Odoo -->
+      <div style="height:15px;"/>
+
+      <!-- Transporte y observaciones -->
+      <div class="row mb-3">
+        <div class="col-6">
+          <strong>TRANSPORTE</strong><br/>
+          <t t-if="o.carrier_id">Transportista: <span t-field="o.carrier_id.name"/></t>
+        </div>
+        <div class="col-6">
+          <strong>OBSERVACIONES</strong><br/>
+          <span t-field="o.note"/>
+        </div>
+      </div>
+      
+      <!-- Espacio en blanco reservado para encabezado por defecto de Odoo -->
+      <div style="height:30px;"/>
+
+      <!-- Recibí conforme -->
+      <div class="row mb-3">
+        <div class="col-12 text-center">
+          <hr/>
+          <strong>RECIBÍ CONFORME</strong><br/>
+
+      <!-- Espacio en blanco reservado para encabezado por defecto de Odoo -->
+      <div style="height:100px;"/>
+
+          Firma, Aclaración y DNI - Fecha: ___/___/___
+        </div>
+      </div>
+
+      <!-- Condiciones -->
+      <div class="row mb-2">
+        <div class="col-12">
+          <strong>CONDICIONES:</strong>
+          Se requiere DNI para la entrega. Verificar cantidad y estado. Reclamos únicamente dentro de las 24 hs.
+        </div>
+      </div>
+        <div style="position: absolute; bottom: 5mm; right: 10mm; font-size: 10px;">
+        Página <span class="page"/> de <span class="topage"/>
+        </div>
+    </div>
+  </t>
+</t>
+</t>
+

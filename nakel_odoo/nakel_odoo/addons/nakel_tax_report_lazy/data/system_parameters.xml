@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Valor False = carga diferida activa. Poner True o 1 para volver al comportamiento estándar del informe. -->
+    <record id="ir_config_nakel_tax_report_lazy_disable" model="ir.config_parameter">
+        <field name="key">nakel_tax_report_lazy.disable</field>
+        <field name="value">False</field>
+    </record>
+</odoo>

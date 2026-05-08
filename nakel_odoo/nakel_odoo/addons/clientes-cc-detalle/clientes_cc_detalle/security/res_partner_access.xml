@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+    Preventistas: necesitan alta/edición de contactos sin tocar usuario por usuario.
+    La granularidad de "qué contactos ven" se controla por ir.rule (nakel_perm_scripts.rule_res_partner_*).
+    Acá solo habilitamos ACL (ir.model.access) para crear/escribir en res.partner.
+    -->
+    <record id="access_res_partner_preventistas_create_write" model="ir.model.access">
+        <field name="name">res.partner: preventistas create/write</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="nakel_perm_scripts.group_vendedores_preventistas"/>
+        <field name="perm_read" eval="1"/>
+        <field name="perm_write" eval="1"/>
+        <field name="perm_create" eval="1"/>
+        <field name="perm_unlink" eval="0"/>
+    </record>
+</odoo>
