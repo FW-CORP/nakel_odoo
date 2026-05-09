@@ -5,9 +5,24 @@ Este documento describe el flujo con **dos remotos** sobre el mismo clon del dir
 | Remoto | URL típica | Rol |
 |--------|------------|-----|
 | **`origin`** | `git@github.com:FW-CORP/nakel_odoo.git` | **Público / equipo FW-CORP**: árbol **acotado** (addons, qweb, tools, docs del paquete Odoo). Rama `main` es la que se comparte y se clona para trabajo corporativo. |
-| **`forgejo`** | `ssh://git@forgejo.int.fwhq.com.ar/klap/cursor_nakel.git` | **Privado**: espejo del **vault completo** (monorepo con `ventas/`, `inventario/`, submódulos, scripts varios, etc.) cuando hace falta backup o trabajo personal sin subir todo a GitHub. |
+| **`forgejo-odoo`** | `ssh://git@forgejo.int.fwhq.com.ar/klap/nakel_odoo.git` | **Instancia interna**: mismo **contenido que debería tener** `origin` (paquete Odoo). En muchos despliegues es un **Mirror** de GitHub: **solo lectura** desde `git push`; la actualización la hace Forgejo al sincronizar desde el remoto configurado. |
+| **`forgejo`** | `ssh://git@forgejo.int.fwhq.com.ar/klap/cursor_nakel.git` | **Privado**: backup del **vault completo** (monorepo ancho). Ahí sí suele poderse **empujar** con `git push` si el repo no es mirror. |
 
-> Los nombres de remoto (`origin`, `forgejo`) se dan de alta con `git remote add`. Si ya existen, `git remote -v` los lista.
+> Alta del remoto del paquete en Forgejo: `git remote add forgejo-odoo ssh://git@forgejo.int.fwhq.com.ar/klap/nakel_odoo.git`
+
+### Por qué `nakel_odoo` en Forgejo sigue viéndose como monorepo
+
+Si el proyecto en Forgejo está marcado como **Mirror** (`Mirror Repository`), **no acepta `git push`**: verás errores del tipo *«Mirror Repository … is read-only»*.
+
+En ese caso el árbol que muestra la web **no lo fijás con push local**, sino con:
+
+1. **Origen del mirror** en la administración de Forgejo: debe ser **`https://github.com/FW-CORP/nakel_odoo.git`** (o el SSH equivalente), no un remoto viejo ni otro repo.
+2. **Sincronización**: forzar *sync* / esperar el intervalo de mirror para que Forgejo traiga el **`main` actual de GitHub** (ya **acotado**, sin el monorepo del accidente).
+3. Si el mirror se creó cuando GitHub tenía aún el monorepo, puede haber **historial/cache** raro hasta que el próximo sync traiga los commits nuevos; un admin puede revisar la URL de origen y los logs del mirror.
+
+Si necesitás un repo **escribible** en Forgejo con el mismo árbol que GitHub, la opción es crear un repo **normal** (no mirror) y hacer `git push` desde `main`, o clonar desde GitHub y usar ese como fuente.
+
+> **Web:** [Forgejo `klap/nakel_odoo` (rama `main`)](https://forgejo.int.fwhq.com.ar/klap/nakel_odoo/src/branch/main)
 
 ---
 
