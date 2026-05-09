@@ -90,9 +90,12 @@ Para incluir algo ignorado **solo** en el remoto privado, opciones:
 
 ---
 
-## Repo Git anidado bajo `nakel_odoo/`
+## Repo Git anidado bajo `nakel_odoo/` (resuelto en disco)
 
-Puede existir un `.git` dentro de `nakel_odoo/` apuntando al mismo u otro remoto. Evitá tener **dos** clones del mismo `origin` sin acuerdo: un solo remoto “canónico” en la raíz del vault reduce confusiones. Si migrás todo a la raíz, eliminá o reconfigurá el repo anidado según proceda.
+Antes existía un **`nakel_odoo/.git`** separado (mismo `origin` que el repo raíz), lo que hacía un **repo dentro del repo**. Eso ya no aplica: el directorio **`nakel_odoo/.git`** se movió a **`.git_embedded_backup/nakel_odoo.git`** (carpeta ignorada por git en la raíz del vault) para poder recuperar historial local con `git --git-dir=...` si hiciera falta.
+
+- **Canónico:** un solo repositorio en **`/media/klap/raid5/cursor_files/nakel/.git`**. Trabajar con `git status`, `commit` y `push` **solo desde la raíz del vault**.
+- **`nakel_odoo/nakel_odoo/`** no es otro repo (no tiene `.git`); es un **árbol duplicado** parcial bajo `nakel_odoo/` que el monorepo ya versiona. No mezclarlo con un segundo `.git`; si en el futuro se unifica o elimina esa duplicación, hacerlo con un cambio grande y consciente (muchos paths en `docs/` y `tools/` lo referencian).
 
 ---
 
