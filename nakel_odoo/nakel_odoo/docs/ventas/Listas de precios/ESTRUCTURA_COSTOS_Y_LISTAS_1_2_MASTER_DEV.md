@@ -110,6 +110,7 @@ Referencia cruzada: `ventas/pdv-listas/README.md` y `ventas/Calculo-costos-impue
 - Criterio impuestos vs listas: `ventas/Calculo-costos-impuestos/ODOO_LISTAS_PRECIOS_VS_IMPUESTOS.md`
 - Scripts migración Excel / listas: `ventas/Listas de precios/scripts/README.md`
 - Costos Excel / `master_dev`: `mssql/ANALISIS_ACTUALIZACION_COSTOS_NAKEL.md`
+- **Cron** — sync costo + réplica **Lista 1 CR Distribución (id 30)** → **Lista 1 Nak (id 48)**: `tools/costo_nak_to_nakel/README.md` (validado en **nakel.net.ar** el **2026-05-09**; ver sección *Estado en producción*).
 
 ---
 
@@ -122,3 +123,9 @@ Desde máquina con `config_nakel.py` y usuario técnico configurado:
 3. Por cada id: `product.pricelist.item` con dominio `pricelist_id = id`, leer `base`, `compute_price`, `base_pricelist_id`, `percent_price`, `fixed_price`, `price_discount`, `price_markup`, `applied_on`, `categ_id`, `product_tmpl_id`.
 
 Los números de este archivo salieron de un script equivalente ejecutado el **2026-04-07**.
+
+---
+
+## 9. Lista 1 en compañía «Nak» (referencia operativa)
+
+En **producción** se usa una **Lista 1** para la compañía **Nak** (`product.pricelist` **id=48** en la lectura asociada al cron de mayo 2026). Las reglas de esa lista se mantienen alineadas con **Lista 1 CR Distribución (id=30)** de **Nakel SA** mediante la acción planificada documentada en `tools/costo_nak_to_nakel/README.md` (copia de ítems + sync de `standard_price` previo). Si restauran la base, **confirmar ids 30 y 48** antes de confiar en el cron.
