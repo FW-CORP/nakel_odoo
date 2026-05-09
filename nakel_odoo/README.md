@@ -5,6 +5,7 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 ## Fuente de verdad
 
 - **Este repositorio (`nakel_odoo`, remoto [`FW-CORP/nakel_odoo`](https://github.com/FW-CORP/nakel_odoo))** es la **única fuente de verdad** para lo que vive bajo su árbol (`addons/`, `qweb/`, `tools/`, `docs/`).
+- **Dos remotos en el mismo clon (vault en disco):** GitHub + Forgejo privado. Ver [`../docs/desarrollo/GIT_REMOTES_GITHUB_FORGEJO.md`](../docs/desarrollo/GIT_REMOTES_GITHUB_FORGEJO.md).
 - **Migración progresiva:** el material Odoo/custom va **entrando acá** de a poco; otros `.git` o copias versionadas fuera de este árbol (p. ej. en un vault hermano) quedan **legacy / obsoletos** para esos contenidos: no ampliarlos; alinear o archivar cuando toque.
 - **No duplicar** el mismo código o runbook en otros árboles con otro historial git: enlazar o clonar este repo y **trabajar aquí** para PRs, tags y despliegues.
 - Las herramientas bajo `tools/` (incl. `tools/nak-ventas/`) siguen la **estructura y reglas** de este README (sin secretos, artefactos pesados fuera del índice donde corresponda).
