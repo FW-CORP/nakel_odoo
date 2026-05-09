@@ -31,6 +31,9 @@ venv/
 config_nakel.py
 config_*.py
 
+# MSSQL local (Docker, backups gestión antigua, .mdf/.7z, logs) — no versionar
+mssql/
+
 # Backup local de addons productivos (no versionar)
 nakel_odoo/addons/addons-Prod/
 
