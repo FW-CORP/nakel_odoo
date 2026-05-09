@@ -100,3 +100,15 @@ Puede existir un `.git` dentro de `nakel_odoo/` apuntando al mismo u otro remoto
 
 - README raíz del paquete Odoo: `README.md` (sección remotes).
 - Historial del accidente monorepo / limpieza: commits y rama `backup/monorepo-accidental-2026-05-09` en este mismo repositorio.
+
+### Bajar commits nuevos de `main` (GitHub) al vault en Forgejo
+
+Si `forgejo/main` sigue la rama ancha y en `origin/main` entraron commits (p. ej. solo docs), incorporalos ahí y volvé a empujar:
+
+```bash
+git checkout backup/monorepo-accidental-2026-05-09
+git merge origin/main
+# resolver conflictos si aparecen
+git push forgejo backup/monorepo-accidental-2026-05-09:main
+git checkout main
+```
