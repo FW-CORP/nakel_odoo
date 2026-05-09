@@ -110,7 +110,7 @@ Para incluir algo ignorado **solo** en el remoto privado, opciones:
 Antes existía un **`nakel_odoo/.git`** separado (mismo `origin` que el repo raíz), lo que hacía un **repo dentro del repo**. Eso ya no aplica: el directorio **`nakel_odoo/.git`** se movió a **`.git_embedded_backup/nakel_odoo.git`** (carpeta ignorada por git en la raíz del vault) para poder recuperar historial local con `git --git-dir=...` si hiciera falta.
 
 - **Canónico:** un solo repositorio en **`/media/klap/raid5/cursor_files/nakel/.git`**. Trabajar con `git status`, `commit` y `push` **solo desde la raíz del vault**.
-- **`nakel_odoo/nakel_odoo/`** no es otro repo (no tiene `.git`); es un **árbol duplicado** parcial bajo `nakel_odoo/` que el monorepo ya versiona. No mezclarlo con un segundo `.git`; si en el futuro se unifica o elimina esa duplicación, hacerlo con un cambio grande y consciente (muchos paths en `docs/` y `tools/` lo referencian).
+- **`nakel_odoo/nakel_odoo/`** era un **árbol duplicado** parcial (sin `.git` propio); **se eliminó del índice** en 2026-05 para una sola jerarquía bajo `nakel_odoo/`. Referencias SICORE/SIAP que solo estaban ahí pasaron a `nakel_odoo/addons/nakel_sicore_siap_compat/`. Si algún enlace viejo en `docs/` o `tools/` aún apunta al path interno, actualizarlo al path canónico.
 
 ---
 

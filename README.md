@@ -19,18 +19,16 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 - `docs/`: runbooks y documentación operativa.
   - Incidentes / postmortems: `docs/incidentes/` (p. ej. upgrade `nakel_wave_picking_link` y OV, 2026-04-29).
 
-### ¿Por qué existe `nakel_odoo/` *dentro* del repo [`FW-CORP/nakel_odoo`](https://github.com/FW-CORP/nakel_odoo)?
+### ¿Por qué existe `nakel_odoo/` *dentro* del vault / monorepo?
 
-El nombre del repositorio y el de una carpeta coinciden: en la raíz del proyecto aparece **`nakel_odoo/`** además de `addons/`, `docs/`, `tools/`, etc. Eso es **histórico** (paquete / mirror del vault en Obsidian, migraciones y convenciones viejas).
+El nombre del repositorio público del paquete Odoo y el de una carpeta en disco pueden coincidir: en la raíz del vault aparece **`nakel_odoo/`** junto a otros árboles. Eso es **histórico** (Obsidian, migraciones, convenciones viejas).
 
-Dentro de esa carpeta puede existir otra **`nakel_odoo/nakel_odoo/`**: es un **subárbol duplicado parcial** (misma forma de `addons/`, `docs/`, `tools/`…), no un segundo repositorio Git. **No es la convención deseable para trabajo nuevo.**
+El subárbol duplicado **`nakel_odoo/nakel_odoo/`** (misma forma de `addons/`, `docs/`, `tools/`…) **fue eliminado** para dejar una sola jerarquía clara bajo `nakel_odoo/`. Los dos archivos de referencia SICORE/SIAP que solo vivían ahí quedaron en `nakel_odoo/addons/nakel_sicore_siap_compat/`.
 
 | Dónde trabajar (preferido) | Notas |
 |----------------------------|--------|
-| Raíz del repo: `addons/`, `docs/`, `tools/`, `qweb/` | Es lo que muestra GitHub en `main` junto a `README.md` y submódulo `usuarios/`. |
-| Primera carpeta homónima: `nakel_odoo/` (addons, docs, qweb, tools…) | Mantener solo si ya hay flujos o rutas que la usan; evitar **añadir** un tercer nivel `nakel_odoo/nakel_odoo/`. |
-
-Eliminar o fusionar el nivel interno implica comparar miles de archivos y actualizar enlaces; si se hace, debe ser un **cambio planificado** (PR aparte), no al vuelo.
+| Paquete en GitHub: raíz con `addons/`, `docs/`, `tools/`, `qweb/` | Es lo que muestra `FW-CORP/nakel_odoo` en `main`. |
+| En este clon del vault: `nakel_odoo/` (addons, docs, qweb, tools…) | Alinear cambios del paquete con el remoto corporativo; no recrear niveles duplicados anidados. |
 
 ## Módulos (prioridad 1 / instalados en `master_dev`)
 

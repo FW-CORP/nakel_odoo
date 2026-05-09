@@ -1,2 +1,0 @@
-# Scripts shell: LF en todos los clones (evita env: 'bash\r' en Linux).
-*.sh text eol=lf
