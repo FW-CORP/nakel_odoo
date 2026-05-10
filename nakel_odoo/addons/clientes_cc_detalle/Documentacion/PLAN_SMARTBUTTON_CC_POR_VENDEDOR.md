@@ -1,7 +1,7 @@
 # Plan: smart button «Cuenta corriente (mis ventas)» en contacto — preventistas
 
 **Alcance:** planificación e implementación por etapas.  
-**Addon:** `clientes-cc-detalle`  
+**Addon:** carpeta `nakel_odoo/addons/clientes_cc_detalle` (nombre técnico del módulo Odoo: `clientes_cc_detalle`).  
 **Base de referencia:** `master_dev` (Odoo 18 Enterprise), consulta MCP **2026-05-02**.
 
 ### Alcance por etapa
@@ -297,3 +297,23 @@ La acción **`account.move.action_clientes_cc_open_my_sales_pivot()`** y el íte
 ---
 
 *Etapa 1: implementar Bloques 0–5. Etapa 2: §11 cuando negocio priorice liquidaciones y detalle 40/60 en comisiones.*
+
+---
+
+## 13. Módulo hermano — informe gerencia (`clientes_cc_informe`)
+
+Para **gerencia y administración** (vista de **todos** los comerciales, no solo `uid`), el addon **`clientes_cc_informe`** en `nakel_odoo/addons/clientes_cc_informe/` añade:
+
+- Grupo **Nakel: informes CC clientes (gerencia)** (`clientes_cc_informe.group_cc_informe_gerencia`).
+- Menú **Ventas → Órdenes → Informe de cuentas corrientes clientes** junto a *Cuentas corrientes (mis ventas)*.
+- Asistente con fecha tope, vendedor opcional, “solo con saldo”, **Abrir lista** e **Imprimir PDF**; reutiliza las vistas pivote/lista/gráfico de `clientes_cc_detalle`.
+
+Documentación en el vault: `docs/desarrollo/CLIENTES_CC_INFORME_GERENCIA.md`.
+
+---
+
+## 14. Estructura del addon en `nakel_odoo` (2026-05)
+
+El módulo **Nakel - CC por vendedor (Contacto)** está en **`nakel_odoo/addons/clientes_cc_detalle/`**: `__manifest__.py`, `__init__.py`, `models/`, `views/` y `security/` en la **raíz** de esa carpeta (misma convención que `nakel_fix_pick`, sin subdirectorio homónimo anidado). `Documentacion/`, `deploy/`, `scripts/` y `commission/` siguen al lado del código Odoo dentro del mismo árbol.
+
+El módulo hermano **Nakel - Detalle CC clientes (gerencia)** vive en **`nakel_odoo/addons/clientes_cc_informe/`** con la misma disposición plana (`__manifest__.py` en la raíz, `models/`, `views/`, `security/`, `report/`).

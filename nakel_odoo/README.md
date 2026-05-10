@@ -28,6 +28,9 @@ Repositorio “paquete” para centralizar **customizaciones de Odoo NAKEL** que
 
 También en `addons/` (p. ej. permisos / UX): `nakel_sale_margin` — restringe margen y `%` a un grupo y evita el `(` huérfano junto a totales cuando no hay permiso.
 
+- **`addons/clientes_cc_detalle`** (`clientes_cc_detalle`): CC «mis ventas» (contacto + menú Ventas). Código en la raíz del directorio (sin subcarpeta duplicada).
+- **`addons/clientes_cc_informe`** (`clientes_cc_informe`): informe y lista de cuentas corrientes por cliente/vendedor para **gerencia** (hermano en menú de `clientes_cc_detalle`). Ver [`../docs/desarrollo/CLIENTES_CC_INFORME_GERENCIA.md`](../docs/desarrollo/CLIENTES_CC_INFORME_GERENCIA.md).
+
 ## Documentación de usuarios y permisos
 
 - `docs/usuarios/` (permisos, grupos, estructuras, troubleshooting)

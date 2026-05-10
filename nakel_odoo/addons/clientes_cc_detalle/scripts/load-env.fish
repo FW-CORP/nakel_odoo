@@ -1,5 +1,5 @@
 # Carga .env (formato KEY=valor, estilo bash) en variables de entorno para Fish.
-# Uso (desde la raíz del repo clientes-cc-detalle):
+# Uso (desde la raíz del addon clientes_cc_detalle o del repo nakel_odoo):
 #   source scripts/load-env.fish
 if not test -f .env
     echo "load-env.fish: no hay .env en $PWD" >&2

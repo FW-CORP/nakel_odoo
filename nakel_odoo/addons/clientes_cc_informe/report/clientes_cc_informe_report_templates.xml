@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        PDF legible: resumen global + bloques por cliente (mayor saldo primero).
+        Detalle sin repetir cliente en cada fila; columna vendedor solo si el filtro no fija uno.
+    -->
+    <template id="report_clientes_cc_informe_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="g" t-value="o._get_report_pdf_global()"/>
+                <t t-set="sections" t-value="o._get_report_pdf_sections()"/>
+                <t t-call="web.external_layout">
+                    <div class="page o_cc_informe_pdf">
+                        <style>
+                            .o_cc_informe_pdf h2 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+                            .o_cc_informe_pdf .cc-meta { font-size: 0.85rem; color: #555; margin-bottom: 1rem; }
+                            .o_cc_informe_pdf .cc-global-box {
+                                border: 1px solid #dee2e6; padding: 0.75rem 1rem; margin-bottom: 1.25rem;
+                                background: #f8f9fa; border-radius: 4px;
+                            }
+                            .o_cc_informe_pdf .cc-global-box strong { margin-right: 0.25rem; }
+                            .o_cc_informe_pdf .cc-bloque {
+                                margin-top: 1.25rem; page-break-inside: avoid;
+                                border-left: 3px solid #714B67; padding-left: 0.75rem;
+                            }
+                            .o_cc_informe_pdf .cc-bloque h4 {
+                                font-size: 1rem; margin: 0 0 0.35rem 0; font-weight: 600;
+                            }
+                            .o_cc_informe_pdf .cc-bloque-resumen {
+                                font-size: 0.8rem; color: #444; margin-bottom: 0.5rem;
+                            }
+                            .o_cc_informe_pdf table.table-detalle { font-size: 0.78rem; }
+                            .o_cc_informe_pdf table.table-detalle th,
+                            .o_cc_informe_pdf table.table-detalle td {
+                                padding: 0.25rem 0.4rem; vertical-align: top;
+                            }
+                        </style>
+                        <h2>Informe — cuentas corrientes clientes</h2>
+                        <div class="cc-meta">
+                            <span t-if="o.date_from or o.date_to">Facturas
+                                <t t-if="o.date_from">desde <t t-esc="o.date_from"/></t>
+                                <t t-if="o.date_from and o.date_to"> — </t>
+                                <t t-if="o.date_to">hasta <t t-esc="o.date_to"/></t>
+                            </span>
+                            <span t-if="not o.date_from and not o.date_to">Sin filtro por fecha de factura.</span>
+                            <br/>
+                            <span t-if="o.user_id">Vendedor: <t t-esc="o.user_id.name"/></span>
+                            <span t-if="not o.user_id">Vendedor: todos.</span>
+                            <br/>
+                            <span t-if="o.commercial_partner_id">Cliente filtrado: <t t-esc="o.commercial_partner_id.display_name"/></span>
+                            <span t-if="not o.commercial_partner_id">Cliente: todos (según filtros).</span>
+                            <br/>
+                            <span t-if="o.only_open">Solo documentos con saldo pendiente.</span>
+                            <span t-if="not o.only_open">Incluye documentos pagados.</span>
+                        </div>
+
+                        <p t-if="not sections" class="alert alert-info">No hay documentos con los filtros seleccionados.</p>
+
+                        <div t-if="sections" class="cc-global-box">
+                            <strong>Resumen general</strong><br/>
+                            Clientes con movimientos: <t t-esc="g['partner_count']"/> —
+                            Documentos: <t t-esc="g['document_count']"/> —
+                            Total importes (firmado): <t t-esc="o.format_currency_amount(g['sum_total_signed'])"/> —
+                            Saldo pendiente total: <t t-esc="o.format_currency_amount(g['sum_residual'])"/>
+                        </div>
+
+                        <t t-foreach="sections" t-as="sec">
+                            <div class="cc-bloque">
+                                <h4><t t-esc="sec['partner_label']"/></h4>
+                                <div class="cc-bloque-resumen">
+                                    <t t-esc="sec['count']"/> documento(s) —
+                                    Total firmado: <t t-esc="o.format_currency_amount(sec['sum_total_signed'])"/> —
+                                    Saldo del cliente (en este informe): <t t-esc="o.format_currency_amount(sec['sum_residual'])"/>
+                                </div>
+                                <table class="table table-sm table-bordered table-detalle">
+                                    <thead>
+                                        <tr>
+                                            <th>Documento</th>
+                                            <th>Fecha</th>
+                                            <th t-if="not o.user_id">Vendedor</th>
+                                            <th>Tipo</th>
+                                            <th class="text-end">Total</th>
+                                            <th class="text-end">Saldo</th>
+                                            <th>Cobro</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="sec['moves']" t-as="m">
+                                            <td><t t-esc="m.name"/></td>
+                                            <td><t t-esc="m.invoice_date"/></td>
+                                            <td t-if="not o.user_id"><t t-esc="m.invoice_user_id.name or ''"/></td>
+                                            <td><span t-field="m.move_type"/></td>
+                                            <td class="text-end"><span t-field="m.amount_total_signed" t-options="{'widget': 'monetary', 'display_currency': m.currency_id}"/></td>
+                                            <td class="text-end"><span t-field="m.amount_residual" t-options="{'widget': 'monetary', 'display_currency': m.currency_id}"/></td>
+                                            <td><span t-field="m.payment_state"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

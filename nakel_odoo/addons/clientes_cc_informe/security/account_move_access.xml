@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Misma idea que clientes_cc_detalle: perm_write evita errores de chatter/actividades al abrir facturas. -->
+        <record id="access_clientes_cc_informe_account_move" model="ir.model.access">
+            <field name="name">clientes_cc_informe account.move (gerencia)</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="group_id" ref="group_cc_informe_gerencia"/>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="0"/>
+            <field name="perm_unlink" eval="0"/>
+        </record>
+        <record id="access_clientes_cc_informe_account_move_line" model="ir.model.access">
+            <field name="name">clientes_cc_informe account.move.line (gerencia)</field>
+            <field name="model_id" ref="account.model_account_move_line"/>
+            <field name="group_id" ref="group_cc_informe_gerencia"/>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="0"/>
+            <field name="perm_unlink" eval="0"/>
+        </record>
+    </data>
+</odoo>

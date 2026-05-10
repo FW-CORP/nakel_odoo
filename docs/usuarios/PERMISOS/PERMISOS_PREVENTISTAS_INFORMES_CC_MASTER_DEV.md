@@ -141,7 +141,7 @@ Solución aplicada en código (para evitar “tocar usuario por usuario”):
 
 - En el módulo `clientes_cc_detalle` se agregó una ACL que da **R/W/C** (sin borrar) sobre `res.partner`
   al grupo `nakel_perm_scripts.group_vendedores_preventistas`.
-- Archivo: `nakel_odoo/addons/clientes-cc-detalle/clientes_cc_detalle/security/res_partner_access.xml`
+- Archivo: `nakel_odoo/addons/clientes_cc_detalle/security/res_partner_access.xml`
 
 Luego: actualizar módulo `clientes_cc_detalle` en la base y refrescar sesión.
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="module_category_nakel_cc_informe" model="ir.module.category">
+        <field name="name">Nakel — Informes CC (gerencia)</field>
+        <field name="description">Detalle de cuentas corrientes de clientes por vendedor; lista, pivote e informe PDF.</field>
+        <field name="sequence">16</field>
+    </record>
+
+    <record id="group_cc_informe_gerencia" model="res.groups">
+        <field name="name">Nakel: informes CC clientes (gerencia)</field>
+        <field name="category_id" ref="module_category_nakel_cc_informe"/>
+        <field name="comment">Menú Ventas → Órdenes → Detalle cuentas corrientes clientes; ve FC/NC de cliente publicadas de todos los comerciales (acotado por reglas del módulo).</field>
+    </record>
+</odoo>

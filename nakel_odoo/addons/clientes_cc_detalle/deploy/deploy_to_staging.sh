@@ -12,8 +12,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ADDON_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-MODULE_DIR="${ADDON_ROOT}/clientes_cc_detalle"
+# Raíz del módulo Odoo (manifest + models/views/security en este mismo directorio).
+MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 STAGE_HOST="${STAGE_HOST:-10.5.0.41}"
 STAGE_USER="${STAGE_USER:-odoo}"

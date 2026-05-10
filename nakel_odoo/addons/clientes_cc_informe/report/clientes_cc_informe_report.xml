@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_clientes_cc_informe" model="ir.actions.report">
+        <field name="name">Detalle cuentas corrientes clientes</field>
+        <field name="model">clientes.cc.informe.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">clientes_cc_informe.report_clientes_cc_informe_document</field>
+        <field name="report_file">clientes_cc_informe.report_clientes_cc_informe_document</field>
+        <field name="groups_id" eval="[(4, ref('group_cc_informe_gerencia')), (4, ref('base.group_system'))]"/>
+    </record>
+</odoo>
