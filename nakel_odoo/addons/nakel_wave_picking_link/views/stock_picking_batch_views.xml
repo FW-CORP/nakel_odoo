@@ -6,6 +6,43 @@
     <field name="inherit_id" ref="stock_picking_batch.stock_picking_batch_form"/>
     <field name="arch" type="xml">
       <xpath expr="//div[@name='button_box']" position="inside">
+        <!-- Semáforo logística: verde OK / rojo revisar (abre OUT pendientes por ola) -->
+        <button
+            name="action_nakel_open_out_pending_wave"
+            type="object"
+            class="oe_stat_button text-bg-success"
+            icon="fa-check-circle"
+            invisible="nakel_wave_logistics_alert"
+            title="No hay OUT pendientes ni líneas de entrega abiertas para esta ola."
+        >
+          <div class="o_stat_info">
+            <span class="o_stat_text">Entregas ola</span>
+            <span class="o_stat_value">OK</span>
+          </div>
+        </button>
+        <button
+            name="action_nakel_open_out_pending_wave"
+            type="object"
+            class="oe_stat_button text-bg-danger"
+            icon="fa-exclamation-triangle"
+            invisible="not nakel_wave_logistics_alert"
+            title="Hay OUT sin finalizar o líneas con cantidad pendiente / picked desincronizado."
+        >
+          <div class="o_stat_info">
+            <span class="o_stat_text">Revisar entregas</span>
+            <field name="nakel_wave_issue_caption" class="o_stat_value" readonly="1"/>
+          </div>
+        </button>
+        <button
+            name="action_nakel_open_so_to_invoice_wave"
+            type="object"
+            class="oe_stat_button text-warning"
+            icon="fa-file-invoice"
+            invisible="nakel_so_to_invoice_count == 0"
+            title="Órdenes de venta de esta ola con facturación pendiente."
+        >
+          <field name="nakel_so_to_invoice_count" widget="statinfo" string="OV sin facturar"/>
+        </button>
         <button
             name="action_nakel_open_sale_orders"
             type="object"
