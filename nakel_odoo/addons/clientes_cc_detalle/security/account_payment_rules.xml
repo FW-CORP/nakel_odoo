@@ -6,16 +6,14 @@
             <field name="name">Nakel CC: pagos ligados a mis facturas/NC</field>
             <field name="model_id" ref="account.model_account_payment"/>
             <!--
-                Filtro para cobros/pagos ligados a FC/NC del comercial.
-                - partner_type=supplier: OP / pagos a proveedor (no van por invoice_user de FC cliente).
-                - create_uid=user: borradores que el propio usuario creó (evita bloqueo al confirmar antes de conciliar).
-                - reconciled_invoice_ids…: cobros ya ligados a FC donde el usuario es comercial.
-                Grupos con (6,0,…): reemplaza la lista en cada upgrade (no quedan grupos viejos con (4,)).
-                Responsable de ventas (group_sale_manager) NO va en esta regla.
+                Solo aplica a usuarios del grupo «Nakel CC / mis ventas» (group_cc_my_sales).
+                NO incluir Ventas / Vendedor ni Responsable: los contadores suelen tener esos grupos y
+                la regla chocaba con lecturas estándar (smartbutton Pagos, borradores RE-X, OP, etc.).
+                Los vendedores sin contabilidad no debían ver todos los pagos: se revocó el perm_read
+                extra en account_payment_access.xml (solo queda lectura explícita para el grupo CC).
             -->
             <field name="domain_force">['|', '|', ('partner_type', '=', 'supplier'), ('create_uid', '=', user.id), ('reconciled_invoice_ids.invoice_user_id', '=', user.id)]</field>
-            <!-- (6,0,ids) reemplaza la lista completa: con (4,...) un upgrade NO quita grupos viejos (p.ej. Responsable de ventas). -->
-            <field name="groups" eval="[(6, 0, [ref('clientes_cc_detalle.group_cc_my_sales'), ref('sales_team.group_sale_salesman')])]"/>
+            <field name="groups" eval="[(6, 0, [ref('clientes_cc_detalle.group_cc_my_sales')])]"/>
         </record>
     </data>
 </odoo>
