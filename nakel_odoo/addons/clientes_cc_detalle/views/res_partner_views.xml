@@ -17,6 +17,12 @@
                         groups="sales_team.group_sale_salesman,sales_team.group_sale_manager,clientes_cc_detalle.group_cc_my_sales"
                     />
                     <field
+                        name="cc_my_sales_residual_opening"
+                        optional="hide"
+                        sum="Total saldo anterior"
+                        groups="sales_team.group_sale_salesman,sales_team.group_sale_manager,clientes_cc_detalle.group_cc_my_sales"
+                    />
+                    <field
                         name="cc_my_sales_state"
                         optional="show"
                         widget="badge"
@@ -60,6 +66,19 @@
                             invisible="cc_my_sales_residual &gt;= 0"
                         />
                     </button>
+                </xpath>
+                <xpath expr="//div[hasclass('oe_button_box')]" position="after">
+                    <group
+                        string="CC mis ventas — saldo anterior al corte"
+                        invisible="cc_my_sales_residual_opening == 0"
+                        groups="clientes_cc_detalle.group_cc_my_sales"
+                    >
+                        <field
+                            name="cc_my_sales_residual_opening"
+                            readonly="1"
+                            string="FC/NC anteriores a la fecha de corte (parámetro sistema)"
+                        />
+                    </group>
                 </xpath>
             </field>
         </record>

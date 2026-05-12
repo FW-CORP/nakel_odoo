@@ -4,6 +4,8 @@
 **Consulta XML-RPC:** 2026-04-11  
 **Objetivo:** Un solo grupo de permisos para muchos vendedores, sin tocar código en el repositorio.
 
+**Ver también:** [PDV / diarios de venta vs número AFIP (master_dev)](../../contabilidad/PDV_DIARIOS_VENTA_AFIP_MASTER_DEV.md) — útil para alinear filtros del informe CC (Central = PV 50, `journal.id` 9 en esa base).
+
 ---
 
 ## Conclusión operativa

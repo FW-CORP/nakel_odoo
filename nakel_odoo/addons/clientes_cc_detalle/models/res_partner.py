@@ -22,6 +22,15 @@ class ResPartner(models.Model):
         help="Suma de amount_residual_signed en FC/NC publicadas donde vos sos el comercial "
         "(invoice_user_id). No incluye deuda por ventas de otros vendedores/PDV.",
     )
+    cc_my_sales_residual_opening = fields.Monetary(
+        string="Saldo anterior al corte (mis ventas)",
+        compute="_compute_cc_my_sales_totals",
+        currency_field="cc_my_sales_currency_id",
+        groups="sales_team.group_sale_salesman,sales_team.group_sale_manager,clientes_cc_detalle.group_cc_my_sales",
+        help="Solo si existe el parámetro «clientes_cc_detalle.my_sales_balance_from_date»: "
+        "suma de saldos pendientes de FC/NC con fecha de factura anterior a esa fecha "
+        "(mismo alcance que el adeudado total). El botón «Cuenta corriente» sigue mostrando el total.",
+    )
     cc_my_sales_currency_id = fields.Many2one(
         comodel_name="res.currency",
         compute="_compute_cc_my_sales_totals",
@@ -44,12 +53,16 @@ class ResPartner(models.Model):
     def _cc_my_sales_domain(self):
         self.ensure_one()
         commercial = self.commercial_partner_id
-        return [
+        domain = [
             ("move_type", "in", ("out_invoice", "out_refund")),
             ("state", "=", "posted"),
             ("commercial_partner_id", "=", commercial.id),
             ("invoice_user_id", "=", self.env.user.id),
         ]
+        domain.extend(
+            self.env["account.move"]._clientes_cc_my_sales_journal_domain_extra()
+        )
+        return domain
 
     @api.depends("commercial_partner_id")
     def _compute_cc_my_sales_totals(self):
@@ -68,6 +81,7 @@ class ResPartner(models.Model):
                 p.cc_my_sales_currency_id = currency
                 p.cc_my_sales_invoice_count = 0
                 p.cc_my_sales_residual = 0.0
+                p.cc_my_sales_residual_opening = 0.0
                 p.cc_my_sales_state = "none"
 
         with_id = self.filtered(lambda r: r.id)
@@ -81,16 +95,23 @@ class ResPartner(models.Model):
             ("invoice_user_id", "=", user.id),
             ("commercial_partner_id", "in", commercial_ids),
         ]
+        base_domain.extend(Move._clientes_cc_my_sales_journal_domain_extra())
         moves = Move.search(base_domain)
+        cut_icp = Move._clientes_cc_my_sales_balance_from_date_icp()
 
         sums = defaultdict(float)
+        opening_sums = defaultdict(float)
         counts = defaultdict(int)
         overdue_by_commercial = defaultdict(bool)
 
         for m in moves:
             cid = m.commercial_partner_id.id
-            sums[cid] += m.amount_residual_signed
+            amt = m.amount_residual_signed
+            sums[cid] += amt
             counts[cid] += 1
+            invd = m.invoice_date
+            if cut_icp and invd and invd < cut_icp:
+                opening_sums[cid] += amt
             if (
                 m.payment_state in ("not_paid", "partial")
                 and m.invoice_date_due
@@ -107,6 +128,7 @@ class ResPartner(models.Model):
             total = sums.get(cid, 0.0)
             partner.cc_my_sales_invoice_count = cnt
             partner.cc_my_sales_residual = total
+            partner.cc_my_sales_residual_opening = opening_sums.get(cid, 0.0) if cut_icp else 0.0
 
             if cnt == 0:
                 partner.cc_my_sales_state = "none"

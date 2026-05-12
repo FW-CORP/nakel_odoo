@@ -29,11 +29,28 @@
                                 options="{'no_create': True, 'no_create_edit': True, 'no_quick_create': True}"
                             />
                             <field name="only_open"/>
+                            <field
+                                name="filtro_pdv_journal_id"
+                                options="{'no_create': True, 'no_create_edit': True}"
+                            />
+                            <field
+                                name="include_migracion_deudores"
+                                invisible="not filtro_pdv_journal_id"
+                            />
                         </group>
                         <group string="Resumen (vista previa)">
                             <field name="sum_total_signed"/>
                             <field name="sum_paid"/>
-                            <field name="sum_residual"/>
+                            <field name="sum_residual" string="Adeudado (listado)"/>
+                            <field
+                                name="sum_opening_residual"
+                                invisible="not date_from"
+                            />
+                            <field
+                                name="sum_residual_with_opening"
+                                invisible="not date_from"
+                                string="Adeudado total (inicial + listado)"
+                            />
                         </group>
                     </group>
                     <group string="Resultados en pantalla">
@@ -60,6 +77,7 @@
                                 <field name="amount_total_signed"/>
                                 <field name="amount_residual"/>
                                 <field name="payment_state"/>
+                                <field name="journal_id" optional="hide"/>
                             </list>
                         </field>
                         <group string="Totales (misma suma que las filas de arriba)" colspan="2">
@@ -72,6 +90,13 @@
                             Los totales de columna en listas embebidas no siempre suman en Odoo; por eso se repiten aquí y en <strong>Resumen</strong>.
                             Los registros del asistente son <strong>temporales</strong> (se limpian solos; el id que sube 4, 5, 6… no guarda historial de informes).
                             La tabla se actualiza al abrir, al guardar o al cambiar filtros. Use <strong>Actualizar vista</strong> si hace falta.
+                            <br/><br/>
+                            <strong>PDV / comisiones:</strong> este informe lista <strong>facturas y NC</strong> con su <strong>total firmado</strong> y <strong>saldo pendiente</strong>
+                            (alineado a la FC, con impuestos). No es el mismo cálculo que el <strong>Estado del cliente</strong> de contabilidad (mayor con pagos y líneas que no son FC).
+                            <br/>
+                            Si define <strong>Fecha desde</strong>, el resumen incluye <strong>saldo inicial</strong>: suma del saldo pendiente actual de FC/NC con fecha de factura <em>anterior</em> a ese día (mismos filtros de vendedor, cliente y diarios). No sustituye el saldo inicial del mayor contable.
+                            <br/>
+                            Menú <strong>PDV / diario de ventas</strong>: vacío = todos los diarios; al abrir el asistente se propone por defecto el diario con PDV AFIP 50 (Central) si existe. Las <strong>NC</strong> restan en el total firmado. Las OV figuran en la factura (campo origen / chatter).
                         </div>
                     </group>
                 </sheet>

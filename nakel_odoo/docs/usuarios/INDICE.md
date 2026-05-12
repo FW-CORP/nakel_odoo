@@ -11,6 +11,11 @@ Este archivo sirve como índice rápido de toda la documentación disponible.
 
 - **[ENCARGADOS_SUCURSALES.md](documentacion/ENCARGADOS_SUCURSALES.md)** - Documentación sobre encargados de sucursales y sus permisos
 
+## 🧾 Contabilidad / PDV AFIP (referencia bases)
+
+- **[PDV_DIARIOS_VENTA_AFIP_MASTER_DEV.md](../contabilidad/PDV_DIARIOS_VENTA_AFIP_MASTER_DEV.md)** - Tabla diarios de venta vs `l10n_ar_afip_pos_number` (master_dev), Central = PV 50, diferencia ID Odoo vs número AFIP
+- **[INFORME_CC_CLIENTES_SALDO_INICIAL.md](../contabilidad/INFORME_CC_CLIENTES_SALDO_INICIAL.md)** - Informe CC + CC mis ventas (`clientes_cc_detalle`): saldo inicial / corte
+
 ## 🔐 Permisos de Inventario
 
 - **[PERMISOS/README.md](PERMISOS/README.md)** - Documentación completa sobre permisos de inventario por sucursal
@@ -60,5 +65,5 @@ Los reportes se generan automáticamente con timestamps y **pueden contener info
 
 ---
 
-**Última actualización:** 2026-04-12
+**Última actualización:** 2026-05-11
 

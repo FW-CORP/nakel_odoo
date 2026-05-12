@@ -2,7 +2,7 @@
 {
     "name": "Nakel - CC por vendedor (Contacto)",
     "summary": "CC por vendedor: botón en contacto + menú pivote Ventas.",
-    "version": "18.0.1.0.20",
+    "version": "18.0.1.0.30",
     "category": "Sales/Sales",
     "author": "Nakel",
     "license": "LGPL-3",
@@ -17,6 +17,8 @@
         "security/account_move_access.xml",
         "security/res_partner_access.xml",
         "security/account_move_rules.xml",
+        "security/account_payment_access.xml",
+        "security/account_payment_rules.xml",
         "views/account_move_clientes_cc_views.xml",
         "views/clientes_cc_menu.xml",
         "views/res_partner_views.xml",
@@ -25,5 +27,8 @@
     "installable": True,
     "application": False,
     "auto_install": False,
+    "external_dependencies": {
+        "python": ["xlsxwriter"],
+    },
 }
 

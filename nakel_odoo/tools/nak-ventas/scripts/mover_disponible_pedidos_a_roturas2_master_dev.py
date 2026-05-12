@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 """
 Mueve stock físico en Nakel SA desde CEN/Existencias hacia CEN/Roturas 2
-basándose en líneas de pedidos/cotizaciones (sale.order) listados por nombre.
+basándose en líneas de cotizaciones NAK (sale.order en borrador).
 
 Política: mueve min(pedido, disponible) por producto en CEN/Existencias.
 
+Por defecto solo se consideran cotizaciones con la etiqueta crm.tag **procesar**
+(nombre exacto, como en la ficha de venta). Tras un --apply exitoso se quita
+**procesar** y se agrega **ProcesadaNN** (nombre configurable), salvo que uses
+--no-mark-processed.
+
+Si no pasás --orden/--ordenes/--archivo-ordenes, el script lista solo cotizaciones
+NAK en borrador que tengan **procesar** y no tengan aún la etiqueta de “ya procesada”.
+
+Opcional: exportá `NAKEL_MOVER_TAG_PROCESAR_ID` y `NAKEL_MOVER_SKIP_TAG_ID` para usar esos
+`crm.tag` por defecto sin repetir `--tag-procesar-id` / `--skip-tag-id` en cada comando.
+
 Uso (desde la raíz del vault nakel):
-  python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run --orden S02202
-  python3 nakel_odoo/tools/nak-ventas/scripts/mover_disponible_pedidos_a_roturas2_master_dev.py --apply --orden S02202 --orden S02203
+  python3 .../mover_disponible_pedidos_a_roturas2_master_dev.py --dry-run
+  python3 .../mover_disponible_pedidos_a_roturas2_master_dev.py --apply
 
 Requiere config_nakel.py en PYTHONPATH (mismo patrón que otros scripts del vault).
 """
@@ -70,6 +81,18 @@ def _resolve_crm_tag_id(models, db: int, uid: int, password: str, *, name: str) 
     if len(rows) > 1:
         raise RuntimeError(f"crm.tag ambiguo para name={name!r}: {rows}")
     return int(rows[0]["id"])
+
+
+def _default_crm_tag_id_from_env(var: str) -> int:
+    """Entero >0 desde variable de entorno, o 0 si no está definida / inválida."""
+    raw = (os.environ.get(var) or "").strip()
+    if not raw:
+        return 0
+    try:
+        v = int(raw)
+        return v if v > 0 else 0
+    except ValueError:
+        return 0
 
 
 def _ensure_crm_tag_id(models, db: int, uid: int, password: str, *, name: str, color: int = 3) -> int:
@@ -294,13 +317,18 @@ def _needs_by_orders(
     only_draft: bool = True,
     skip_tag_id: int | None = None,
     require_tag_id: int | None = None,
-) -> Dict[str, Dict[int, float]]:
+) -> Tuple[Dict[str, Dict[int, float]], List[str]]:
     """
-    Lee líneas de venta solo de cotizaciones NAK: no modifica sale.order.
+    Lee líneas de venta solo de cotizaciones NAK (solo lectura de sale.order aquí).
     - company_nak_id: compañía Nak (en master_dev suele ser 2; Nakel SA es 1).
     - only_draft: True = solo state 'draft' (cotización); no tocar ventas confirmadas.
+
+    Devuelve (necesidades_por_orden, omitidas) donde omitidas son nombres de orden
+    que no cumplen etiquetas requeridas / exclusiones (no se procesan).
+    Las etiquetas se actualizan en el bucle principal solo con --apply (ver main).
     """
     per_order: Dict[str, Dict[int, float]] = {}
+    skipped: List[str] = []
     for name in order_names:
         sos = models.execute_kw(
             db,
@@ -334,15 +362,15 @@ def _needs_by_orders(
         if require_tag_id is not None:
             tags = so.get("tag_ids") or []
             if int(require_tag_id) not in [int(t) for t in tags]:
-                print(f"SKIP: Orden {name!r} no tiene tag_id={require_tag_id} (etiqueta requerida).")
-                per_order[name] = {}
+                print(f"SKIP: Orden {name!r} no tiene la etiqueta «procesar» (tag_id={require_tag_id}).")
+                skipped.append(name)
                 continue
 
         if skip_tag_id is not None:
             tags = so.get("tag_ids") or []
             if int(skip_tag_id) in [int(t) for t in tags]:
-                print(f"SKIP: Orden {name!r} ya tiene tag_id={skip_tag_id} (marcada como procesada).")
-                per_order[name] = {}
+                print(f"SKIP: Orden {name!r} ya está marcada como procesada (tag_id={skip_tag_id}).")
+                skipped.append(name)
                 continue
 
         so_id = so["id"]
@@ -365,7 +393,7 @@ def _needs_by_orders(
                 pid = l["product_id"][0]
                 need[pid] += float(l.get("product_uom_qty") or 0.0)
         per_order[name] = dict(need)
-    return per_order
+    return per_order, skipped
 
 
 def main() -> int:
@@ -392,6 +420,34 @@ def main() -> int:
     p.add_argument("--dry-run", action="store_true", help="No crea pickings; solo reporta.")
     p.add_argument("--apply", action="store_true", help="Crea y valida pickings (traslados internos).")
     p.add_argument(
+        "--permitir-sin-tag-procesar",
+        action="store_true",
+        help="Por defecto solo se procesan cotizaciones con etiqueta «procesar». "
+        "Con este flag se aceptan también las indicadas por --orden aunque no tengan esa etiqueta.",
+    )
+    p.add_argument(
+        "--no-mark-processed",
+        action="store_true",
+        help="Con --apply: no agregar la etiqueta «ProcesadaNN» ni quitar «procesar» tras mover stock.",
+    )
+    p.add_argument(
+        "--ensure-tag-procesar",
+        action="store_true",
+        help="Si no existe la etiqueta crm.tag con el nombre de --tag-procesar-name, la crea en Odoo.",
+    )
+    p.add_argument(
+        "--tag-procesar-color",
+        type=int,
+        default=6,
+        help="Índice de color Odoo (0-11) al crear «procesar» con --ensure-tag-procesar (default 6, tono rosa/salmón).",
+    )
+    p.add_argument(
+        "--tag-procesada-color",
+        type=int,
+        default=4,
+        help="Índice de color al crear «ProcesadaNN» si falta al marcar post-apply (default 4, azul claro).",
+    )
+    p.add_argument(
         "--skip-tag-name",
         default="ProcesadaNN",
         help="Nombre exacto de crm.tag en sale.order.tag_ids para SALTEAR cotizaciones ya marcadas (default: ProcesadaNN). Usar '' para deshabilitar.",
@@ -399,18 +455,19 @@ def main() -> int:
     p.add_argument(
         "--skip-tag-id",
         type=int,
-        default=0,
-        help="ID de crm.tag para SALTEAR cotizaciones ya marcadas (tiene prioridad sobre --skip-tag-name). 0 = deshabilitado.",
+        default=_default_crm_tag_id_from_env("NAKEL_MOVER_SKIP_TAG_ID"),
+        help="ID de crm.tag para SALTEAR cotizaciones ya marcadas (tiene prioridad sobre --skip-tag-name). 0 = deshabilitado. "
+        "Default: entorno NAKEL_MOVER_SKIP_TAG_ID si está definido (>0).",
     )
     p.add_argument(
         "--mark-processed",
         action="store_true",
-        help="En modo --apply, marca la cotización NAK con el tag (evita reprocesos).",
+        help="(Compatibilidad) Con --apply ya se marca por defecto; este flag no cambia el comportamiento.",
     )
     p.add_argument(
         "--ensure-tag",
         action="store_true",
-        help="Si el tag no existe, lo crea (solo si --mark-processed o si se usa para skip por nombre).",
+        help="Si --skip-tag-name no existe, crear esa etiqueta (ProcesadaNN). Equivale a asegurar etiqueta procesada.",
     )
     p.add_argument(
         "--listar-omitidos",
@@ -418,16 +475,16 @@ def main() -> int:
         help="Lista productos de la cotización con pedido>0 pero stock=0 en CEN/Existencias (no se crea movimiento; es esperado).",
     )
 
-    # Flujo por etiquetas (NAK): "Procesar" -> ejecutar -> marcar "ProcesadaNN"
+    # Flujo por etiquetas (NAK): "procesar" -> ejecutar -> marcar "ProcesadaNN"
     p.add_argument(
         "--auto-desde-tag-procesar",
         action="store_true",
-        help="Si no se pasan --orden/--ordenes/--archivo-ordenes, selecciona automáticamente cotizaciones de NAK con el tag 'Procesar' (configurable).",
+        help="Igual que no pasar órdenes: lista cotizaciones NAK con etiqueta «procesar» (sin «ProcesadaNN»). Opcional si ya es el comportamiento por defecto.",
     )
     p.add_argument(
         "--require-tag-procesar",
         action="store_true",
-        help="Aun si pasás órdenes por nombre, exige que tengan la etiqueta 'Procesar' (si no, se saltean).",
+        help="Obsoleto: la etiqueta «procesar» ya se exige por defecto (salvo --permitir-sin-tag-procesar). Este flag no hace falta.",
     )
     p.add_argument(
         "--tag-procesar-name",
@@ -437,14 +494,15 @@ def main() -> int:
     p.add_argument(
         "--tag-procesar-id",
         type=int,
-        default=0,
-        help="ID de crm.tag para indicar 'a procesar' (tiene prioridad sobre --tag-procesar-name). 0 = deshabilitado.",
+        default=_default_crm_tag_id_from_env("NAKEL_MOVER_TAG_PROCESAR_ID"),
+        help="ID de crm.tag para indicar 'a procesar' (tiene prioridad sobre --tag-procesar-name). 0 = deshabilitado. "
+        "Default: entorno NAKEL_MOVER_TAG_PROCESAR_ID si está definido (>0).",
     )
     p.add_argument(
         "--limit-auto",
         type=int,
         default=0,
-        help="Límite de cotizaciones a seleccionar cuando se usa --auto-desde-tag-procesar (0 = sin límite).",
+        help="Límite de cotizaciones al listar automáticamente por «procesar» (sin órdenes en CLI o con --auto-desde-tag-procesar). 0 = sin límite.",
     )
 
     args = p.parse_args()
@@ -482,7 +540,10 @@ def main() -> int:
     db, uid, models = _get_xmlrpc_models(cfg)
     password = cfg["password"]
 
-    # Resolver tag "Procesar" (opcional)
+    require_procesar = not bool(args.permitir_sin_tag_procesar)
+    mark_processed = bool(args.apply) and not bool(args.no_mark_processed)
+
+    # Resolver tag «procesar» (nombre exacto, p. ej. como en la ficha de venta)
     procesar_tag_id: int | None = None
     if int(args.tag_procesar_id or 0) > 0:
         procesar_tag_id = int(args.tag_procesar_id)
@@ -490,21 +551,57 @@ def main() -> int:
         tag_name = (args.tag_procesar_name or "").strip()
         if tag_name:
             procesar_tag_id = _resolve_crm_tag_id(models, db, uid, password, name=tag_name)
-            if procesar_tag_id is None and (args.auto_desde_tag_procesar or args.require_tag_procesar):
-                raise RuntimeError(f"No existe crm.tag name={tag_name!r} (requerido para el modo por etiquetas).")
+            if procesar_tag_id is None and args.ensure_tag_procesar:
+                procesar_tag_id = _ensure_crm_tag_id(
+                    models,
+                    db,
+                    uid,
+                    password,
+                    name=tag_name,
+                    color=int(args.tag_procesar_color),
+                )
+                print(
+                    f"INFO: creada etiqueta crm.tag {tag_name!r} id={procesar_tag_id} "
+                    f"(color={args.tag_procesar_color})."
+                )
 
+    # Etiqueta «ya procesada» (para no re-listar en auto y para marcar tras --apply)
     skip_tag_id: int | None = None
     skip_tag_name = (args.skip_tag_name or "").strip()
     if int(args.skip_tag_id or 0) > 0:
         skip_tag_id = int(args.skip_tag_id)
     elif skip_tag_name:
-        if args.ensure_tag:
-            skip_tag_id = _ensure_crm_tag_id(models, db, uid, password, name=skip_tag_name)
-        else:
-            skip_tag_id = _resolve_crm_tag_id(models, db, uid, password, name=skip_tag_name)
-            if skip_tag_id is None:
-                print(f"WARNING: skip-tag-name={skip_tag_name!r} no existe; no se salteará por tag.")
-                skip_tag_id = None
+        skip_tag_id = _resolve_crm_tag_id(models, db, uid, password, name=skip_tag_name)
+        if skip_tag_id is None:
+            print(
+                f"WARNING: etiqueta {skip_tag_name!r} no existe; no se filtrará «ya procesada» "
+                f"hasta que exista (se puede crear con --ensure-tag al aplicar)."
+            )
+
+    if mark_processed:
+        if not skip_tag_name and not int(args.skip_tag_id or 0):
+            print("WARNING: --apply sin etiqueta procesada (--skip-tag-name vacío): no se marcarán cotizaciones.")
+            mark_processed = False
+        elif skip_tag_id is None and skip_tag_name:
+            skip_tag_id = _ensure_crm_tag_id(
+                models,
+                db,
+                uid,
+                password,
+                name=skip_tag_name,
+                color=int(args.tag_procesada_color),
+            )
+            print(
+                f"INFO: creada etiqueta {skip_tag_name!r} id={skip_tag_id} "
+                f"(color={args.tag_procesada_color}) para marcar tras mover."
+            )
+
+    if require_procesar and not procesar_tag_id:
+        raise RuntimeError(
+            "Por defecto solo se procesan cotizaciones con la etiqueta «procesar», pero no existe ese crm.tag. "
+            "Creala en Odoo (nombre exacto) o ejecutá con --ensure-tag-procesar / --tag-procesar-id. "
+            "Si querés omitir este requisito: --permitir-sin-tag-procesar."
+        )
 
     company_id = int(args.company_nakel)
     src_loc, dst_loc = _resolve_locations(models, db, uid, password, company_id)
@@ -512,33 +609,39 @@ def main() -> int:
 
     only_draft = not args.permitir_venta_confirmada
 
-    if not order_names:
-        if args.auto_desde_tag_procesar:
-            if not procesar_tag_id:
-                raise RuntimeError("auto-desde-tag-procesar requiere --tag-procesar-id o --tag-procesar-name válido.")
-            lim = int(args.limit_auto or 0)
-            order_names = _select_orders_by_tag(
-                models,
-                db,
-                uid,
-                password,
-                company_nak_id=int(args.company_nak),
-                only_draft=only_draft,
-                must_have_tag_id=int(procesar_tag_id),
-                skip_tag_id=skip_tag_id,
-                limit=lim if lim > 0 else None,
+    want_auto = (not order_names) or bool(args.auto_desde_tag_procesar)
+    if want_auto:
+        if not procesar_tag_id:
+            raise RuntimeError(
+                "Listado automático por etiqueta requiere resolver «procesar» (--tag-procesar-name / --tag-procesar-id)."
             )
-            if not order_names:
-                print("No hay cotizaciones con tag 'Procesar' para procesar (o ya están marcadas como procesadas).")
-                return 0
+        lim = int(args.limit_auto or 0)
+        order_names = _select_orders_by_tag(
+            models,
+            db,
+            uid,
+            password,
+            company_nak_id=int(args.company_nak),
+            only_draft=only_draft,
+            must_have_tag_id=int(procesar_tag_id),
+            skip_tag_id=skip_tag_id,
+            limit=lim if lim > 0 else None,
+        )
+        if not order_names:
             print(
-                f"Auto-selección por tag: {len(order_names)} orden(es): "
-                f"{', '.join(order_names[:20])}{'…' if len(order_names) > 20 else ''}"
+                "No hay cotizaciones NAK en borrador con etiqueta «procesar» "
+                "(o todas tienen ya la etiqueta de procesadas / filtro vacío)."
             )
-        else:
-            p.error("Pasá órdenes con --orden/--ordenes/--archivo-ordenes, o usá --auto-desde-tag-procesar.")
+            return 0
+        print(
+            f"Selección por etiqueta «procesar»: {len(order_names)} orden(es): "
+            f"{', '.join(order_names[:20])}{'…' if len(order_names) > 20 else ''}"
+        )
+    elif not order_names:
+        p.error("Pasá órdenes con --orden/--ordenes/--archivo-ordenes, o dejá la lista vacía para usar solo «procesar».")
 
-    per_order = _needs_by_orders(
+    require_tag_for_scan = int(procesar_tag_id) if (require_procesar and procesar_tag_id) else None
+    per_order, skipped_orders = _needs_by_orders(
         models,
         db,
         uid,
@@ -547,8 +650,18 @@ def main() -> int:
         company_nak_id=int(args.company_nak),
         only_draft=only_draft,
         skip_tag_id=skip_tag_id,
-        require_tag_id=int(procesar_tag_id) if (args.require_tag_procesar and procesar_tag_id) else None,
+        require_tag_id=require_tag_for_scan,
     )
+    skipped_set = set(skipped_orders)
+    order_names = [o for o in order_names if o not in skipped_set]
+    if skipped_set:
+        print(
+            f"Omitidas {len(skipped_set)} orden(es) por etiquetas / criterios: "
+            f"{', '.join(sorted(skipped_set)[:30])}{'…' if len(skipped_set) > 30 else ''}"
+        )
+    if not order_names:
+        print("No quedan órdenes para procesar tras filtros.")
+        return 0
 
     print(
         f"Lectura ventas: NAK company_id={args.company_nak} | solo_draft={only_draft} "
@@ -556,6 +669,19 @@ def main() -> int:
     )
     print(f"Stock/picking: Nakel SA company_id={company_id} | src={src_loc} dst={dst_loc} | picking_type_id={picking_type_id}")
     print("Modo:", "DRY-RUN" if args.dry_run else "APPLY")
+    proc_label = f"id={procesar_tag_id}" if procesar_tag_id else "—"
+    skip_label = f"id={skip_tag_id}" if skip_tag_id else (skip_tag_name or "—")
+    if args.dry_run:
+        mark_note = "no aplica en dry-run (etiquetas solo con --apply)"
+    elif mark_processed:
+        mark_note = "sí"
+    else:
+        mark_note = "no (--no-mark-processed o --skip-tag-name vacío)"
+    print(
+        f"Etiquetas NAK: exigir «procesar» ({proc_label}): "
+        f"{'sí' if require_procesar else 'no (--permitir-sin-tag-procesar)'} | "
+        f"con --apply marcar «{skip_tag_name or skip_label}» y quitar procesar: {mark_note}"
+    )
 
     for oname in order_names:
         need = per_order.get(oname, {})
@@ -668,18 +794,8 @@ def main() -> int:
         )
         print("APPLY: picking principal validado:", pid_pick)
 
-        if args.mark_processed:
-            if not (skip_tag_id or skip_tag_name):
-                raise RuntimeError("mark-processed requiere --skip-tag-id o --skip-tag-name (no vacío).")
-            tag_id_to_set = skip_tag_id
-            if tag_id_to_set is None and skip_tag_name:
-                # si no se resolvió antes, resolver/crear ahora
-                if args.ensure_tag:
-                    tag_id_to_set = _ensure_crm_tag_id(models, db, uid, password, name=skip_tag_name)
-                else:
-                    tag_id_to_set = _resolve_crm_tag_id(models, db, uid, password, name=skip_tag_name)
-            if not tag_id_to_set:
-                raise RuntimeError("No se pudo resolver el tag para mark-processed (revisar nombre/ID).")
+        if mark_processed and skip_tag_id:
+            tag_id_to_set = int(skip_tag_id)
             so_id = models.execute_kw(
                 db,
                 uid,
@@ -690,30 +806,24 @@ def main() -> int:
                 {"limit": 2},
             )
             if so_id:
-                # add "ProcesadaNN" tag without removing others
+                tag_cmds: List[tuple] = [(4, int(tag_id_to_set))]
+                if procesar_tag_id:
+                    tag_cmds.append((3, int(procesar_tag_id)))
                 models.execute_kw(
                     db,
                     uid,
                     password,
                     "sale.order",
                     "write",
-                    [so_id, {"tag_ids": [(4, int(tag_id_to_set))]}],
+                    [so_id, {"tag_ids": tag_cmds}],
                 )
-                # remove "procesar" tag to avoid confusion in the workflow
                 if procesar_tag_id:
-                    models.execute_kw(
-                        db,
-                        uid,
-                        password,
-                        "sale.order",
-                        "write",
-                        [so_id, {"tag_ids": [(3, int(procesar_tag_id))]}],
-                    )
                     print(
-                        f"APPLY: cotización {oname} marcada ProcesadaNN (tag_id={tag_id_to_set}) y quitado tag 'procesar' (tag_id={procesar_tag_id})"
+                        f"APPLY: cotización {oname}: tag procesada id={tag_id_to_set}, "
+                        f"quitado «procesar» id={procesar_tag_id}"
                     )
                 else:
-                    print(f"APPLY: cotización {oname} marcada ProcesadaNN (tag_id={tag_id_to_set})")
+                    print(f"APPLY: cotización {oname}: solo tag procesada id={tag_id_to_set} (sin quitar procesar)")
 
     return 0
 

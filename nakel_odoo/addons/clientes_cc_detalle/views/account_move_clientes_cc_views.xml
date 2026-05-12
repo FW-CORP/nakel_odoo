@@ -39,14 +39,38 @@
     <record id="view_account_move_tree_my_sales" model="ir.ui.view">
         <field name="name">account.move.list.clientes.cc.my.sales</field>
         <field name="model">account.move</field>
+        <!-- Prioridad alta: otras herencias de account.move (list) no deben pisar columnas/sumas. -->
+        <field name="priority">32</field>
         <field name="arch" type="xml">
             <list string="Documentos (mis ventas)" create="false" delete="false" duplicate="false" default_order="invoice_date desc, name desc">
+                <header>
+                    <button
+                        name="action_clientes_cc_export_my_sales_spreadsheet"
+                        type="object"
+                        string="Descargar Excel"
+                        class="btn-secondary"
+                        groups="sales_team.group_sale_salesman,sales_team.group_sale_manager,clientes_cc_detalle.group_cc_my_sales"
+                        title="Exporta los documentos visibles según filtros de búsqueda (mismo criterio que la lista). Si falta la librería xlsxwriter, se genera CSV."
+                    />
+                </header>
+                <button
+                    name="action_clientes_cc_open_applied_payments"
+                    type="object"
+                    string="Pagos"
+                    icon="fa-money"
+                    title="Ver cobros (pagos) aplicados a este comprobante"
+                    class="btn-link"
+                    groups="sales_team.group_sale_salesman,sales_team.group_sale_manager,clientes_cc_detalle.group_cc_my_sales"
+                    invisible="move_type not in ('out_invoice', 'out_refund') or state != 'posted' or payment_state == 'not_paid'"
+                />
                 <field name="name"/>
                 <field name="invoice_date"/>
+                <field name="invoice_date_due" optional="show"/>
                 <field name="commercial_partner_id"/>
                 <field name="journal_id" optional="show"/>
                 <field name="move_type" optional="show"/>
                 <field name="amount_total_signed" sum="Total"/>
+                <field name="cc_paid_amount" sum="Total"/>
                 <field name="amount_residual" sum="Total"/>
                 <field name="payment_state" optional="show"/>
                 <field name="state" optional="hide"/>

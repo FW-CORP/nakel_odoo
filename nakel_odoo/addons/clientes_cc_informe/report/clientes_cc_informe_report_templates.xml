@@ -52,16 +52,35 @@
                             <br/>
                             <span t-if="o.only_open">Solo documentos con saldo pendiente.</span>
                             <span t-if="not o.only_open">Incluye documentos pagados.</span>
+                            <br/>
+                            <span t-if="o.filtro_pdv_journal_id">PDV / diario: <t t-esc="o.filtro_pdv_journal_id.display_name"/> —
+                                migración deudores: <t t-if="o.include_migracion_deudores">sí</t><t t-if="not o.include_migracion_deudores">no</t>.
+                            </span>
+                            <span t-if="not o.filtro_pdv_journal_id">Todos los diarios de venta (sin filtro por PDV).</span>
                         </div>
 
-                        <p t-if="not sections" class="alert alert-info">No hay documentos con los filtros seleccionados.</p>
+                        <p
+                            t-if="not sections and not (o.date_from and g.get('sum_opening_residual'))"
+                            class="alert alert-info"
+                        >No hay documentos con los filtros seleccionados.</p>
+                        <p
+                            t-if="not sections and o.date_from and g.get('sum_opening_residual')"
+                            class="alert alert-info"
+                        >No hay facturas en el rango de fechas listado; sí hay saldo inicial (FC/NC anteriores al «desde») según filtros.</p>
 
-                        <div t-if="sections" class="cc-global-box">
+                        <div t-if="sections or (o.date_from and g.get('has_opening'))" class="cc-global-box">
                             <strong>Resumen general</strong><br/>
                             Clientes con movimientos: <t t-esc="g['partner_count']"/> —
                             Documentos: <t t-esc="g['document_count']"/> —
-                            Total importes (firmado): <t t-esc="o.format_currency_amount(g['sum_total_signed'])"/> —
-                            Saldo pendiente total: <t t-esc="o.format_currency_amount(g['sum_residual'])"/>
+                            Total importes (firmado): <t t-esc="o.format_currency_amount(g['sum_total_signed'])"/><br/>
+                            <t t-if="g.get('has_opening')">
+                                Adeudado (solo facturas en el rango listado): <t t-esc="o.format_currency_amount(g['sum_residual'])"/> —
+                                Saldo inicial (FC/NC con factura anterior al «desde»): <t t-esc="o.format_currency_amount(g['sum_opening_residual'])"/> —
+                                <strong>Adeudado total (inicial + listado): <t t-esc="o.format_currency_amount(g['sum_residual_with_opening'])"/></strong>
+                            </t>
+                            <t t-if="not g.get('has_opening')">
+                                Saldo pendiente total: <t t-esc="o.format_currency_amount(g['sum_residual'])"/>
+                            </t>
                         </div>
 
                         <t t-foreach="sections" t-as="sec">
@@ -70,7 +89,14 @@
                                 <div class="cc-bloque-resumen">
                                     <t t-esc="sec['count']"/> documento(s) —
                                     Total firmado: <t t-esc="o.format_currency_amount(sec['sum_total_signed'])"/> —
-                                    Saldo del cliente (en este informe): <t t-esc="o.format_currency_amount(sec['sum_residual'])"/>
+                                    <t t-if="o.date_from">
+                                        Adeudado (en el rango): <t t-esc="o.format_currency_amount(sec['sum_residual'])"/> —
+                                        Saldo inicial: <t t-esc="o.format_currency_amount(sec['sum_opening_residual'])"/> —
+                                        <strong>Adeudado total: <t t-esc="o.format_currency_amount(sec['sum_residual_with_opening'])"/></strong>
+                                    </t>
+                                    <t t-if="not o.date_from">
+                                        Saldo del cliente (en este informe): <t t-esc="o.format_currency_amount(sec['sum_residual'])"/>
+                                    </t>
                                 </div>
                                 <table class="table table-sm table-bordered table-detalle">
                                     <thead>

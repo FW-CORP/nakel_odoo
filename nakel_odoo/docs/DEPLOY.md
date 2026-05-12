@@ -125,3 +125,7 @@ sudo systemctl start odoo
 
 Referencias en repo: `tools/deploy/deploy_addon.sh` (variables `NAKEL_*`), y en `nakel_picking/UPGRADE.md` / `ACTUALIZACION_CORRECTA.md` (orden stop → `-u` → start).
 
+## Registro: rollout Odoo 18 (abril 2026)
+
+El despliegue de la **nueva versión Odoo 18 Enterprise** (ventana de cambio, paquete, `addons_path`, `-u`, pruebas y seguimiento post-deploy) quedó descrito en el vault en **`docs/informes/INFORME_ACTIVIDADES_ABRIL_2026.md`** (sección **8**), con referencias cruzadas a `docs/pre_update/checklist.md`, `docs/pre_update/rollupdate_pasos.md` y este archivo.
+

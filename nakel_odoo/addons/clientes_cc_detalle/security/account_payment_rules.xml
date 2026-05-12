@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Solo pagos que impactan FC/NC donde el usuario es comercial en cabecera. -->
+        <record id="rule_account_payment_cc_my_sales" model="ir.rule">
+            <field name="name">Nakel CC: pagos ligados a mis facturas/NC</field>
+            <field name="model_id" ref="account.model_account_payment"/>
+            <!--
+                Filtro para cobros/pagos ligados a FC/NC del comercial.
+                - partner_type=supplier: OP / pagos a proveedor (no van por invoice_user de FC cliente).
+                - create_uid=user: borradores que el propio usuario creó (evita bloqueo al confirmar antes de conciliar).
+                - reconciled_invoice_ids…: cobros ya ligados a FC donde el usuario es comercial.
+                Grupos con (6,0,…): reemplaza la lista en cada upgrade (no quedan grupos viejos con (4,)).
+                Responsable de ventas (group_sale_manager) NO va en esta regla.
+            -->
+            <field name="domain_force">['|', '|', ('partner_type', '=', 'supplier'), ('create_uid', '=', user.id), ('reconciled_invoice_ids.invoice_user_id', '=', user.id)]</field>
+            <!-- (6,0,ids) reemplaza la lista completa: con (4,...) un upgrade NO quita grupos viejos (p.ej. Responsable de ventas). -->
+            <field name="groups" eval="[(6, 0, [ref('clientes_cc_detalle.group_cc_my_sales'), ref('sales_team.group_sale_salesman')])]"/>
+        </record>
+    </data>
+</odoo>

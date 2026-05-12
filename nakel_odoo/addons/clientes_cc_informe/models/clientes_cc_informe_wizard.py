@@ -6,6 +6,7 @@ from datetime import date, datetime
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tools.misc import formatLang
 from odoo.tools.safe_eval import safe_eval
 
 try:
@@ -41,7 +42,10 @@ class ClientesCcInformeWizard(models.TransientModel):
     date_from = fields.Date(
         string="Fecha desde (factura)",
         help="Incluye documentos con fecha de factura a partir de esta fecha (inclusive). "
-        "Vacío = sin límite inferior.",
+        "Vacío = sin límite inferior. Si está definida, el resumen puede mostrar además el "
+        "«saldo inicial» como suma de saldos pendientes de FC/NC anteriores a esa fecha "
+        "(mismos filtros de vendedor, cliente y diarios; no incluye pagos sueltos ni mayor "
+        "contable completo).",
     )
     date_to = fields.Date(
         string="Fecha hasta (factura)",
@@ -76,6 +80,22 @@ class ClientesCcInformeWizard(models.TransientModel):
         default=True,
         help="Excluye documentos totalmente pagados (estado de pago: pagado).",
     )
+    filtro_pdv_journal_id = fields.Many2one(
+        comodel_name="account.journal",
+        string="PDV / diario de ventas",
+        domain="[('company_id', '=', company_id), ('type', '=', 'sale')]",
+        help="Elija el diario de facturación (p. ej. FACT NAKEL CENTRAL = PDV 50). "
+        "Vacío = se incluyen todos los diarios de venta. Por defecto se propone el diario "
+        "con PDV AFIP 50 si existe en la compañía. No replica el «Estado del cliente» de "
+        "contabilidad (mayor con pagos y saldo inicial).",
+    )
+    include_migracion_deudores = fields.Boolean(
+        string="Incluir diario migración de deudores",
+        default=True,
+        help="Si eligió un diario de ventas arriba, suele mantener también las FC del "
+        "diario de migración (saldo arrastrado de la plataforma anterior). Desmarque para "
+        "excluirlas.",
+    )
     preview_move_ids = fields.Many2many(
         comodel_name="account.move",
         relation="clientes_cc_informe_wizard_account_move_rel",
@@ -95,12 +115,32 @@ class ClientesCcInformeWizard(models.TransientModel):
         string="Cobrado / aplicado (vista previa)",
         currency_field="currency_id",
         compute="_compute_summary",
-        help="Total firmado menos saldo pendiente, por documento (moneda de la compañía).",
+        help="Suma de importes firmados menos suma de saldos pendientes de las filas "
+        "mostradas (= aplicado sobre FC/NC listadas). Las NC de cliente suman importe "
+        "firmado negativo; no incluye pagos sueltos ni saldo inicial del mayor.",
     )
     sum_residual = fields.Monetary(
         string="Adeudado (vista previa)",
         currency_field="currency_id",
         compute="_compute_summary",
+        help="Suma de saldos pendientes de las facturas listadas abajo (rango de fechas "
+        "según filtros).",
+    )
+    sum_opening_residual = fields.Monetary(
+        string="Saldo inicial (FC/NC antes del «desde»)",
+        currency_field="currency_id",
+        compute="_compute_summary",
+        help="Solo si hay «Fecha desde»: suma actual de amount_residual de FC/NC publicadas "
+        "con fecha de factura anterior a ese día, con los mismos filtros de vendedor, "
+        "cliente, PDV/migración y solo pendiente. No es el saldo inicial del mayor contable "
+        "(no incluye asientos que no sean FC/NC de cliente).",
+    )
+    sum_residual_with_opening = fields.Monetary(
+        string="Adeudado total (inicial + listado)",
+        currency_field="currency_id",
+        compute="_compute_summary",
+        help="Saldo inicial más adeudado de las filas listadas. Si no hay «Fecha desde», "
+        "coincide con el adeudado del listado.",
     )
 
     _FILTER_KEYS = frozenset(
@@ -110,10 +150,62 @@ class ClientesCcInformeWizard(models.TransientModel):
             "user_id",
             "commercial_partner_id",
             "only_open",
+            "filtro_pdv_journal_id",
+            "include_migracion_deudores",
         }
     )
 
-    @api.depends("user_id", "company_id")
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+        company = self.env.company
+        cid = res.get("company_id")
+        if isinstance(cid, (list, tuple)):
+            company = self.env["res.company"].browse(cid[0])
+        elif cid:
+            company = self.env["res.company"].browse(cid)
+        if "filtro_pdv_journal_id" in fields_list and not res.get("filtro_pdv_journal_id"):
+            Journal = self.env["account.journal"]
+            if "l10n_ar_afip_pos_number" in Journal._fields:
+                j = Journal.search(
+                    [
+                        ("company_id", "=", company.id),
+                        ("type", "=", "sale"),
+                        ("l10n_ar_afip_pos_number", "=", 50),
+                    ],
+                    limit=1,
+                    order="id",
+                )
+                if j:
+                    res["filtro_pdv_journal_id"] = j.id
+        return res
+
+    def _domain_afip_journal_filter(self):
+        """Lista de términos de dominio ``journal_id`` o vacía."""
+        self.ensure_one()
+        if not self.filtro_pdv_journal_id:
+            return []
+        Journal = self.env["account.journal"]
+        jids = [self.filtro_pdv_journal_id.id]
+        if self.include_migracion_deudores:
+            mig = Journal.search(
+                [
+                    ("company_id", "=", self.company_id.id),
+                    ("type", "=", "sale"),
+                    "|",
+                    ("name", "ilike", "migración"),
+                    ("name", "ilike", "migracion"),
+                ]
+            )
+            jids = list(set(jids + mig.ids))
+        return [("journal_id", "in", jids)]
+
+    @api.depends(
+        "user_id",
+        "company_id",
+        "filtro_pdv_journal_id",
+        "include_migracion_deudores",
+    )
     def _compute_allowed_partner_ids(self):
         Move = self.env["account.move"]
         Partner = self.env["res.partner"]
@@ -124,19 +216,34 @@ class ClientesCcInformeWizard(models.TransientModel):
             ]
             if wiz.company_id:
                 base_move_domain.append(("company_id", "=", wiz.company_id.id))
+            afip_dom = wiz._domain_afip_journal_filter()
             if wiz.user_id:
                 moves = Move.search(
-                    base_move_domain + [("invoice_user_id", "=", wiz.user_id.id)]
+                    base_move_domain
+                    + [("invoice_user_id", "=", wiz.user_id.id)]
+                    + afip_dom
                 )
                 pids = moves.mapped("commercial_partner_id").ids
                 wiz.allowed_partner_ids = Partner.browse(pids)
             else:
-                moves = Move.search(base_move_domain)
+                moves = Move.search(base_move_domain + afip_dom)
                 pids = list({m.commercial_partner_id.id for m in moves if m.commercial_partner_id})
                 wiz.allowed_partner_ids = Partner.browse(pids)
 
-    @api.depends("preview_move_ids", "preview_move_ids.amount_total_signed", "preview_move_ids.amount_residual")
+    @api.depends(
+        "preview_move_ids",
+        "preview_move_ids.amount_total_signed",
+        "preview_move_ids.amount_residual",
+        "date_from",
+        "user_id",
+        "commercial_partner_id",
+        "only_open",
+        "filtro_pdv_journal_id",
+        "include_migracion_deudores",
+        "company_id",
+    )
     def _compute_summary(self):
+        Move = self.env["account.move"]
         for wiz in self:
             moves = wiz.preview_move_ids
             total = sum(moves.mapped("amount_total_signed"))
@@ -144,6 +251,44 @@ class ClientesCcInformeWizard(models.TransientModel):
             wiz.sum_total_signed = total
             wiz.sum_residual = residual
             wiz.sum_paid = total - residual
+            opening = 0.0
+            if wiz.date_from:
+                dom = wiz._build_domain_opening_moves()
+                opening = sum(Move.search(dom).mapped("amount_residual"))
+            wiz.sum_opening_residual = opening
+            wiz.sum_residual_with_opening = opening + residual
+
+    def _build_domain_opening_moves(self, commercial_partner_id=None):
+        """Dominio FC/NC con fecha de factura estrictamente anterior a ``date_from``."""
+        self.ensure_one()
+        if not self.date_from:
+            return [("id", "=", 0)]
+        domain = [
+            ("move_type", "in", ("out_invoice", "out_refund")),
+            ("state", "=", "posted"),
+            ("invoice_date", "<", self.date_from),
+        ]
+        if commercial_partner_id is not None:
+            domain.append(("commercial_partner_id", "=", commercial_partner_id))
+        elif self.commercial_partner_id:
+            domain.append(("commercial_partner_id", "=", self.commercial_partner_id.id))
+        if self.user_id:
+            domain.append(("invoice_user_id", "=", self.user_id.id))
+        if self.only_open:
+            domain.append(("payment_state", "in", ("not_paid", "partial")))
+        domain.extend(self._domain_afip_journal_filter())
+        if self.company_id:
+            domain.append(("company_id", "=", self.company_id.id))
+        return domain
+
+    def _search_opening_moves(self, commercial_partner_id=None):
+        self.ensure_one()
+        if not self.date_from:
+            return self.env["account.move"]
+        return self.env["account.move"].search(
+            self._build_domain_opening_moves(commercial_partner_id=commercial_partner_id),
+            order="invoice_date desc, name desc",
+        )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -167,6 +312,7 @@ class ClientesCcInformeWizard(models.TransientModel):
         ]
         if self.company_id:
             domain.append(("company_id", "=", self.company_id.id))
+        domain.extend(self._domain_afip_journal_filter())
         moves = self.env["account.move"].search(domain)
         return moves.mapped("commercial_partner_id").ids
 
@@ -186,6 +332,7 @@ class ClientesCcInformeWizard(models.TransientModel):
             domain.append(("commercial_partner_id", "=", self.commercial_partner_id.id))
         if self.only_open:
             domain.append(("payment_state", "in", ("not_paid", "partial")))
+        domain.extend(self._domain_afip_journal_filter())
         return domain
 
     def _search_moves(self):
@@ -215,29 +362,30 @@ class ClientesCcInformeWizard(models.TransientModel):
             currency_obj=self.company_id.currency_id,
         )
 
-    def _get_report_pdf_global(self):
-        """Totales globales del PDF (todos los movimientos del informe)."""
-        self.ensure_one()
-        moves = self._get_moves()
+    def _pdf_global_from_moves(self, moves):
+        """Totales globales (mismo criterio que el PDF) a partir de un recordset."""
         if not moves:
-            return {
+            base = {
                 "partner_count": 0,
                 "document_count": 0,
                 "sum_total_signed": 0.0,
                 "sum_residual": 0.0,
             }
-        partner_ids = {m.commercial_partner_id.id for m in moves if m.commercial_partner_id}
-        return {
-            "partner_count": len(partner_ids),
-            "document_count": len(moves),
-            "sum_total_signed": sum(moves.mapped("amount_total_signed")),
-            "sum_residual": sum(moves.mapped("amount_residual")),
-        }
+        else:
+            partner_ids = {m.commercial_partner_id.id for m in moves if m.commercial_partner_id}
+            base = {
+                "partner_count": len(partner_ids),
+                "document_count": len(moves),
+                "sum_total_signed": sum(moves.mapped("amount_total_signed")),
+                "sum_residual": sum(moves.mapped("amount_residual")),
+            }
+        base["sum_opening_residual"] = self.sum_opening_residual
+        base["sum_residual_with_opening"] = self.sum_residual_with_opening
+        base["has_opening"] = bool(self.date_from)
+        return base
 
-    def _get_report_pdf_sections(self):
-        """Lista de dicts por cliente: partner, moves, totales (PDF agrupado)."""
-        self.ensure_one()
-        moves = self._get_moves()
+    def _pdf_sections_from_moves(self, moves):
+        """Bloques por cliente, mayor saldo primero (mismo orden que el PDF)."""
         if not moves:
             return []
         mapping = {}
@@ -254,6 +402,14 @@ class ClientesCcInformeWizard(models.TransientModel):
                 key=lambda mm: (mm.invoice_date or date.min, mm.name or ""),
                 reverse=True,
             )
+            sum_res = sum(pmoves.mapped("amount_residual"))
+            sum_open = 0.0
+            if self.date_from and pid:
+                sum_open = sum(
+                    self._search_opening_moves(commercial_partner_id=pid).mapped(
+                        "amount_residual"
+                    )
+                )
             sections.append(
                 {
                     "partner": partner,
@@ -263,11 +419,23 @@ class ClientesCcInformeWizard(models.TransientModel):
                     "moves": pmoves,
                     "count": len(pmoves),
                     "sum_total_signed": sum(pmoves.mapped("amount_total_signed")),
-                    "sum_residual": sum(pmoves.mapped("amount_residual")),
+                    "sum_residual": sum_res,
+                    "sum_opening_residual": sum_open,
+                    "sum_residual_with_opening": sum_open + sum_res,
                 }
             )
-        sections.sort(key=lambda s: -s["sum_residual"])
+        sections.sort(key=lambda s: -s["sum_residual_with_opening"])
         return sections
+
+    def _get_report_pdf_global(self):
+        """Totales globales del PDF (todos los movimientos del informe)."""
+        self.ensure_one()
+        return self._pdf_global_from_moves(self._get_moves())
+
+    def _get_report_pdf_sections(self):
+        """Lista de dicts por cliente: partner, moves, totales (PDF agrupado)."""
+        self.ensure_one()
+        return self._pdf_sections_from_moves(self._get_moves())
 
     def write(self, vals):
         res = super().write(vals)
@@ -275,7 +443,15 @@ class ClientesCcInformeWizard(models.TransientModel):
             self._refresh_preview()
         return res
 
-    @api.onchange("date_from", "date_to", "user_id", "only_open", "commercial_partner_id")
+    @api.onchange(
+        "date_from",
+        "date_to",
+        "user_id",
+        "only_open",
+        "commercial_partner_id",
+        "filtro_pdv_journal_id",
+        "include_migracion_deudores",
+    )
     def _onchange_filters_refresh_preview(self):
         if self.user_id:
             pids = self._commercial_partner_ids_for_vendor(self.user_id)
@@ -373,22 +549,317 @@ class ClientesCcInformeWizard(models.TransientModel):
         )
         pendiente = _("Sí") if self.only_open else _("No (incluye pagados)")
         comp = self.company_id.name or ""
-        return [
+        if self.filtro_pdv_journal_id:
+            pos = ""
+            if "l10n_ar_afip_pos_number" in self.env["account.journal"]._fields:
+                pos = self.filtro_pdv_journal_id.l10n_ar_afip_pos_number
+            pos_txt = (" (AFIP %s)" % pos) if pos not in (False, None) else ""
+            pdv_txt = _("%(journal)s%(pos)s — incl. migración: %(m)s") % {
+                "journal": self.filtro_pdv_journal_id.display_name,
+                "pos": pos_txt,
+                "m": _("Sí") if self.include_migracion_deudores else _("No"),
+            }
+        else:
+            pdv_txt = _("Todos los diarios de venta (sin filtro por PDV)")
+        lines = [
             (_("Compañía"), comp),
             (_("Rango fechas (factura)"), rango),
             (_("Vendedor (filtro)"), vendedor),
             (_("Cliente (filtro)"), cliente),
             (_("Solo saldo pendiente"), pendiente),
+            (_("Filtro PDV / diario"), pdv_txt),
+        ]
+        if self.date_from:
+            lines.append(
+                (
+                    _("Saldo inicial (FC/NC con factura anterior al «desde»)"),
+                    formatLang(
+                        self.env,
+                        self.sum_opening_residual,
+                        currency_obj=self.company_id.currency_id,
+                    ),
+                )
+            )
+            lines.append(
+                (
+                    _("Adeudado total (inicial + facturas en el rango listadas)"),
+                    formatLang(
+                        self.env,
+                        self.sum_residual_with_opening,
+                        currency_obj=self.company_id.currency_id,
+                    ),
+                )
+            )
+        return lines
+
+    def _export_xlsx_build_formats(self, wb):
+        """Formatos compartidos (layout tipo PDF + hoja plana)."""
+        return {
+            "fmt_title": wb.add_format(
+                {"bold": True, "font_size": 14, "valign": "vcenter", "bottom": 2}
+            ),
+            "fmt_meta_key": wb.add_format({"bold": True}),
+            "fmt_meta_val": wb.add_format({}),
+            "fmt_global_box": wb.add_format(
+                {
+                    "text_wrap": True,
+                    "valign": "vcenter",
+                    "border": 1,
+                    "bg_color": "#F8F9FA",
+                    "font_size": 10,
+                }
+            ),
+            "fmt_header": wb.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4A4A4A",
+                    "font_color": "#FFFFFF",
+                    "border": 1,
+                    "text_wrap": True,
+                    "valign": "vcenter",
+                }
+            ),
+            "fmt_text": wb.add_format({"border": 1, "valign": "vcenter"}),
+            "fmt_date": wb.add_format(
+                {"border": 1, "num_format": "dd/mm/yyyy", "valign": "vcenter"}
+            ),
+            "fmt_money": wb.add_format(
+                {"border": 1, "num_format": "#,##0.00", "valign": "vcenter"}
+            ),
+            "fmt_section": wb.add_format(
+                {"bold": True, "font_size": 11, "top": 1, "valign": "vcenter"}
+            ),
+            "fmt_tot_label": wb.add_format({"bold": True, "valign": "vcenter"}),
+            "fmt_tot_num": wb.add_format(
+                {
+                    "bold": True,
+                    "num_format": "#,##0.00",
+                    "bg_color": "#E8E8E8",
+                    "border": 1,
+                    "valign": "vcenter",
+                }
+            ),
+            "fmt_tot_int": wb.add_format(
+                {
+                    "bold": True,
+                    "num_format": "0",
+                    "bg_color": "#E8E8E8",
+                    "border": 1,
+                    "valign": "vcenter",
+                }
+            ),
+            "fmt_group_title": wb.add_format(
+                {
+                    "bold": True,
+                    "font_size": 11,
+                    "bg_color": "#714B67",
+                    "font_color": "#FFFFFF",
+                    "valign": "vcenter",
+                    "border": 1,
+                }
+            ),
+            "fmt_subbar": wb.add_format(
+                {
+                    "italic": True,
+                    "bg_color": "#F0EBF0",
+                    "border": 1,
+                    "valign": "vcenter",
+                }
+            ),
+        }
+
+    def _export_xlsx_headers_pdf_table(self, hide_vendor):
+        """Cabeceras de tabla alineadas al PDF (última columna «Cobro» = estado de pago)."""
+        if hide_vendor:
+            return [
+                _("Documento"),
+                _("Fecha"),
+                _("Tipo"),
+                _("Total"),
+                _("Saldo"),
+                _("Cobro"),
+            ]
+        return [
+            _("Documento"),
+            _("Fecha"),
+            _("Vendedor"),
+            _("Tipo"),
+            _("Total"),
+            _("Saldo"),
+            _("Cobro"),
         ]
 
-    def _export_xlsx_bytes(self, moves):
+    def _export_xlsx_write_sheet_pdf_layout(self, ws, moves, hide_vendor, fmts):
+        """Primera hoja: mismo orden y bloques que el PDF (resumen global + cliente)."""
         self.ensure_one()
+        cur = fmts
+        headers = self._export_xlsx_headers_pdf_table(hide_vendor)
+        last_col = len(headers) - 1
+        row = 0
+        ws.merge_range(
+            row, 0, row, last_col, _("Informe — cuentas corrientes clientes"), cur["fmt_title"]
+        )
+        row += 1
+        for key, val in self._export_xlsx_meta_lines():
+            ws.write(row, 0, key, cur["fmt_meta_key"])
+            ws.merge_range(row, 1, row, last_col, val, cur["fmt_meta_val"])
+            row += 1
+        row += 1
+
+        g = self._pdf_global_from_moves(moves)
+        currency = self.company_id.currency_id
+        if g.get("has_opening"):
+            resumen_txt = _(
+                "Clientes con movimientos: %(pc)s — Documentos: %(dc)s — "
+                "Total importes (firmado): %(tf)s — Adeudado (solo facturas en el rango): %(sr)s — "
+                "Saldo inicial (FC/NC anteriores al «desde»): %(so)s — Adeudado total: %(st)s"
+            ) % {
+                "pc": g["partner_count"],
+                "dc": g["document_count"],
+                "tf": formatLang(self.env, g["sum_total_signed"], currency_obj=currency),
+                "sr": formatLang(self.env, g["sum_residual"], currency_obj=currency),
+                "so": formatLang(self.env, g["sum_opening_residual"], currency_obj=currency),
+                "st": formatLang(
+                    self.env, g["sum_residual_with_opening"], currency_obj=currency
+                ),
+            }
+        else:
+            resumen_txt = _(
+                "Clientes con movimientos: %(pc)s — Documentos: %(dc)s — "
+                "Total importes (firmado): %(tf)s — Saldo pendiente total: %(sr)s"
+            ) % {
+                "pc": g["partner_count"],
+                "dc": g["document_count"],
+                "tf": formatLang(self.env, g["sum_total_signed"], currency_obj=currency),
+                "sr": formatLang(self.env, g["sum_residual"], currency_obj=currency),
+            }
+        ws.merge_range(row, 0, row, last_col, resumen_txt, cur["fmt_global_box"])
+        row += 1
+        row += 1
+
+        selection_pay = self._selection_dict("account.move", "payment_state")
+        selection_move = self._selection_dict("account.move", "move_type")
+        sections = self._pdf_sections_from_moves(moves)
+
+        for sec in sections:
+            ws.merge_range(
+                row, 0, row, last_col, sec["partner_label"], cur["fmt_group_title"]
+            )
+            row += 1
+            if self.date_from:
+                bloque_txt = _(
+                    "%(n)s documento(s) — Total firmado: %(tf)s — Adeudado (en el rango): %(sr)s — "
+                    "Saldo inicial (antes del «desde»): %(so)s — Adeudado total: %(tt)s"
+                ) % {
+                    "n": sec["count"],
+                    "tf": formatLang(
+                        self.env, sec["sum_total_signed"], currency_obj=currency
+                    ),
+                    "sr": formatLang(self.env, sec["sum_residual"], currency_obj=currency),
+                    "so": formatLang(
+                        self.env, sec["sum_opening_residual"], currency_obj=currency
+                    ),
+                    "tt": formatLang(
+                        self.env,
+                        sec["sum_residual_with_opening"],
+                        currency_obj=currency,
+                    ),
+                }
+            else:
+                bloque_txt = _(
+                    "%(n)s documento(s) — Total firmado: %(tf)s — Saldo del cliente "
+                    "(en este informe): %(sr)s"
+                ) % {
+                    "n": sec["count"],
+                    "tf": formatLang(
+                        self.env, sec["sum_total_signed"], currency_obj=currency
+                    ),
+                    "sr": formatLang(self.env, sec["sum_residual"], currency_obj=currency),
+                }
+            ws.merge_range(row, 0, row, last_col, bloque_txt, cur["fmt_subbar"])
+            row += 1
+            header_row = row
+            for col, h in enumerate(headers):
+                ws.write(header_row, col, h, cur["fmt_header"])
+            row = header_row + 1
+            for m in sec["moves"]:
+                ws.write(row, 0, m.name or "", cur["fmt_text"])
+                if m.invoice_date:
+                    ws.write_datetime(
+                        row,
+                        1,
+                        datetime.combine(m.invoice_date, datetime.min.time()),
+                        cur["fmt_date"],
+                    )
+                else:
+                    ws.write(row, 1, "", cur["fmt_text"])
+                c = 2
+                if not hide_vendor:
+                    ws.write(row, c, m.invoice_user_id.name or "", cur["fmt_text"])
+                    c += 1
+                ws.write(
+                    row,
+                    c,
+                    selection_move.get(m.move_type, m.move_type),
+                    cur["fmt_text"],
+                )
+                c += 1
+                ws.write_number(row, c, float(m.amount_total_signed), cur["fmt_money"])
+                c += 1
+                ws.write_number(row, c, float(m.amount_residual), cur["fmt_money"])
+                c += 1
+                ws.write(
+                    row,
+                    c,
+                    selection_pay.get(m.payment_state, m.payment_state),
+                    cur["fmt_text"],
+                )
+                row += 1
+            row += 1
+
+        total_firmado = sum(moves.mapped("amount_total_signed"))
+        total_saldo = sum(moves.mapped("amount_residual"))
+        n_docs = len(moves)
+        row += 1
+        ws.merge_range(row, 0, row, last_col, _("Resumen (totales del informe)"), cur["fmt_section"])
+        row += 1
+        if self.date_from:
+            ws.write(row, 0, _("SALDO INICIAL (FC/NC antes del «desde»)"), cur["fmt_tot_label"])
+            ws.write_number(row, 1, float(self.sum_opening_residual), cur["fmt_tot_num"])
+            row += 1
+        ws.write(row, 0, _("TOTAL FIRMADO (documentos listados)"), cur["fmt_tot_label"])
+        ws.write_number(row, 1, float(total_firmado), cur["fmt_tot_num"])
+        row += 1
+        ws.write(row, 0, _("ADEUDADO (solo documentos listados)"), cur["fmt_tot_label"])
+        ws.write_number(row, 1, float(total_saldo), cur["fmt_tot_num"])
+        row += 1
+        if self.date_from:
+            ws.write(row, 0, _("ADEUDADO TOTAL (inicial + listado)"), cur["fmt_tot_label"])
+            ws.write_number(row, 1, float(self.sum_residual_with_opening), cur["fmt_tot_num"])
+            row += 1
+        ws.write(row, 0, _("Cantidad de comprobantes (FC / NC)"), cur["fmt_tot_label"])
+        ws.write_number(row, 1, n_docs, cur["fmt_tot_int"])
+
+        ws.set_column(0, 0, 22)
+        ws.set_column(1, 1, 12)
+        if not hide_vendor:
+            ws.set_column(2, 2, 22)
+            ws.set_column(3, 3, 28)
+            ws.set_column(4, 5, 16)
+            ws.set_column(6, 6, 22)
+        else:
+            ws.set_column(2, 2, 28)
+            ws.set_column(3, 4, 16)
+            ws.set_column(5, 5, 22)
+
+    def _export_xlsx_write_sheet_flat(self, ws, moves, hide_vendor, fmts):
+        """Segunda hoja: tabla plana (para pivot / análisis), columnas alineadas al PDF."""
+        self.ensure_one()
+        cur = fmts
         rows = self._build_export_rows(moves)
         total_firmado = sum(moves.mapped("amount_total_signed"))
         total_saldo = sum(moves.mapped("amount_residual"))
         n_docs = len(moves)
-        hide_vendor = bool(self.user_id)
-
         if hide_vendor:
             headers = [
                 _("Documento"),
@@ -397,7 +868,7 @@ class ClientesCcInformeWizard(models.TransientModel):
                 _("Tipo"),
                 _("Total firmado"),
                 _("Saldo"),
-                _("Estado pago"),
+                _("Cobro"),
             ]
         else:
             headers = [
@@ -408,125 +879,68 @@ class ClientesCcInformeWizard(models.TransientModel):
                 _("Tipo"),
                 _("Total firmado"),
                 _("Saldo"),
-                _("Estado pago"),
+                _("Cobro"),
             ]
         last_col = len(headers) - 1
-
-        buf = io.BytesIO()
-        wb = xlsxwriter.Workbook(buf, {"in_memory": True})
-
-        fmt_title = wb.add_format(
-            {"bold": True, "font_size": 14, "valign": "vcenter", "bottom": 2}
-        )
-        fmt_meta_key = wb.add_format({"bold": True})
-        fmt_meta_val = wb.add_format({})
-        fmt_header = wb.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4A4A4A",
-                "font_color": "#FFFFFF",
-                "border": 1,
-                "text_wrap": True,
-                "valign": "vcenter",
-            }
-        )
-        fmt_text = wb.add_format({"border": 1, "valign": "vcenter"})
-        fmt_date = wb.add_format({"border": 1, "num_format": "dd/mm/yyyy", "valign": "vcenter"})
-        fmt_money = wb.add_format({"border": 1, "num_format": "#,##0.00", "valign": "vcenter"})
-        fmt_section = wb.add_format({"bold": True, "font_size": 11, "top": 1, "valign": "vcenter"})
-        fmt_tot_label = wb.add_format({"bold": True, "valign": "vcenter"})
-        fmt_tot_num = wb.add_format(
-            {
-                "bold": True,
-                "num_format": "#,##0.00",
-                "bg_color": "#E8E8E8",
-                "border": 1,
-                "valign": "vcenter",
-            }
-        )
-        fmt_tot_int = wb.add_format(
-            {
-                "bold": True,
-                "num_format": "0",
-                "bg_color": "#E8E8E8",
-                "border": 1,
-                "valign": "vcenter",
-            }
-        )
-        fmt_group_title = wb.add_format(
-            {
-                "bold": True,
-                "font_size": 11,
-                "bg_color": "#714B67",
-                "font_color": "#FFFFFF",
-                "valign": "vcenter",
-                "border": 1,
-            }
-        )
-        fmt_subbar = wb.add_format(
-            {
-                "italic": True,
-                "bg_color": "#F0EBF0",
-                "border": 1,
-                "valign": "vcenter",
-            }
-        )
-
-        ws = wb.add_worksheet(_("Detalle")[:31])
-
         row = 0
-        ws.merge_range(row, 0, row, last_col, _("Informe — cuentas corrientes clientes"), fmt_title)
+        ws.merge_range(
+            row, 0, row, last_col, _("Detalle plano (tabla única)"), cur["fmt_title"]
+        )
         row += 1
         for key, val in self._export_xlsx_meta_lines():
-            ws.write(row, 0, key, fmt_meta_key)
-            ws.merge_range(row, 1, row, last_col, val, fmt_meta_val)
+            ws.write(row, 0, key, cur["fmt_meta_key"])
+            ws.merge_range(row, 1, row, last_col, val, cur["fmt_meta_val"])
             row += 1
         row += 1
-
         header_row = row
         for col, h in enumerate(headers):
-            ws.write(header_row, col, h, fmt_header)
+            ws.write(header_row, col, h, cur["fmt_header"])
         row = header_row + 1
-
         for r in rows:
-            ws.write(row, 0, r["documento"], fmt_text)
+            ws.write(row, 0, r["documento"], cur["fmt_text"])
             fd = r["fecha"]
             if isinstance(fd, date):
                 ws.write_datetime(
                     row,
                     1,
                     datetime.combine(fd, datetime.min.time()),
-                    fmt_date,
+                    cur["fmt_date"],
                 )
             else:
-                ws.write(row, 1, str(fd or ""), fmt_text)
+                ws.write(row, 1, str(fd or ""), cur["fmt_text"])
             c = 2
             if not hide_vendor:
-                ws.write(row, c, r["vendedor"], fmt_text)
+                ws.write(row, c, r["vendedor"], cur["fmt_text"])
                 c += 1
-            ws.write(row, c, r["cliente"], fmt_text)
+            ws.write(row, c, r["cliente"], cur["fmt_text"])
             c += 1
-            ws.write(row, c, r["tipo"], fmt_text)
+            ws.write(row, c, r["tipo"], cur["fmt_text"])
             c += 1
-            ws.write_number(row, c, float(r["total_firmado"]), fmt_money)
+            ws.write_number(row, c, float(r["total_firmado"]), cur["fmt_money"])
             c += 1
-            ws.write_number(row, c, float(r["saldo"]), fmt_money)
+            ws.write_number(row, c, float(r["saldo"]), cur["fmt_money"])
             c += 1
-            ws.write(row, c, r["estado_pago"], fmt_text)
+            ws.write(row, c, r["estado_pago"], cur["fmt_text"])
             row += 1
-
         row += 1
-        ws.merge_range(row, 0, row, last_col, _("Resumen (totales del informe)"), fmt_section)
+        ws.merge_range(row, 0, row, last_col, _("Resumen (totales del informe)"), cur["fmt_section"])
         row += 1
-        ws.write(row, 0, _("TOTAL FIRMADO"), fmt_tot_label)
-        ws.write_number(row, 1, float(total_firmado), fmt_tot_num)
+        if self.date_from:
+            ws.write(row, 0, _("SALDO INICIAL (FC/NC antes del «desde»)"), cur["fmt_tot_label"])
+            ws.write_number(row, 1, float(self.sum_opening_residual), cur["fmt_tot_num"])
+            row += 1
+        ws.write(row, 0, _("TOTAL FIRMADO (documentos listados)"), cur["fmt_tot_label"])
+        ws.write_number(row, 1, float(total_firmado), cur["fmt_tot_num"])
         row += 1
-        ws.write(row, 0, _("TOTAL ADEUDADO (saldo pendiente)"), fmt_tot_label)
-        ws.write_number(row, 1, float(total_saldo), fmt_tot_num)
+        ws.write(row, 0, _("ADEUDADO (solo documentos listados)"), cur["fmt_tot_label"])
+        ws.write_number(row, 1, float(total_saldo), cur["fmt_tot_num"])
         row += 1
-        ws.write(row, 0, _("Cantidad de comprobantes (FC / NC)"), fmt_tot_label)
-        ws.write_number(row, 1, n_docs, fmt_tot_int)
-
+        if self.date_from:
+            ws.write(row, 0, _("ADEUDADO TOTAL (inicial + listado)"), cur["fmt_tot_label"])
+            ws.write_number(row, 1, float(self.sum_residual_with_opening), cur["fmt_tot_num"])
+            row += 1
+        ws.write(row, 0, _("Cantidad de comprobantes (FC / NC)"), cur["fmt_tot_label"])
+        ws.write_number(row, 1, n_docs, cur["fmt_tot_int"])
         ws.set_column(0, 0, 22)
         ws.set_column(1, 1, 12)
         if not hide_vendor:
@@ -534,129 +948,25 @@ class ClientesCcInformeWizard(models.TransientModel):
             ws.set_column(3, 3, 36)
             ws.set_column(4, 4, 28)
             ws.set_column(5, 6, 16)
-            ws.set_column(7, 7, 18)
+            ws.set_column(7, 7, 22)
         else:
             ws.set_column(2, 2, 38)
             ws.set_column(3, 3, 28)
             ws.set_column(4, 5, 16)
-            ws.set_column(6, 6, 18)
+            ws.set_column(6, 6, 22)
         ws.freeze_panes(header_row + 1, 0)
 
-        # --- Hoja 2: mismo agrupamiento que el PDF (cliente → líneas + subtotales)
-        if hide_vendor:
-            headers_g = [
-                _("Documento"),
-                _("Fecha"),
-                _("Tipo"),
-                _("Total firmado"),
-                _("Saldo"),
-                _("Estado pago"),
-            ]
-        else:
-            headers_g = [
-                _("Documento"),
-                _("Fecha"),
-                _("Vendedor"),
-                _("Tipo"),
-                _("Total firmado"),
-                _("Saldo"),
-                _("Estado pago"),
-            ]
-        last_col_g = len(headers_g) - 1
-        ws2 = wb.add_worksheet(_("Por cliente")[:31])
-        row2 = 0
-        ws2.merge_range(
-            row2,
-            0,
-            row2,
-            last_col_g,
-            _("Agrupado por cliente (orden: mayor saldo primero)"),
-            fmt_title,
-        )
-        row2 += 1
-        for key, val in self._export_xlsx_meta_lines():
-            ws2.write(row2, 0, key, fmt_meta_key)
-            ws2.merge_range(row2, 1, row2, last_col_g, val, fmt_meta_val)
-            row2 += 1
-        row2 += 1
-
-        selection_pay = self._selection_dict("account.move", "payment_state")
-        selection_move = self._selection_dict("account.move", "move_type")
-
-        for sec in self._get_report_pdf_sections():
-            ws2.merge_range(
-                row2, 0, row2, last_col_g, sec["partner_label"], fmt_group_title
-            )
-            row2 += 1
-            ws2.write(row2, 0, _("Comprobantes"), fmt_subbar)
-            ws2.write_number(row2, 1, sec["count"], fmt_tot_int)
-            ws2.write(row2, 2, _("Total firmado (cliente)"), fmt_subbar)
-            ws2.write_number(row2, 3, float(sec["sum_total_signed"]), fmt_money)
-            ws2.write(row2, 4, _("Saldo (cliente)"), fmt_subbar)
-            ws2.write_number(row2, 5, float(sec["sum_residual"]), fmt_money)
-            row2 += 1
-            for col, h in enumerate(headers_g):
-                ws2.write(row2, col, h, fmt_header)
-            row2 += 1
-            for m in sec["moves"]:
-                ws2.write(row2, 0, m.name or "", fmt_text)
-                if m.invoice_date:
-                    ws2.write_datetime(
-                        row2,
-                        1,
-                        datetime.combine(m.invoice_date, datetime.min.time()),
-                        fmt_date,
-                    )
-                else:
-                    ws2.write(row2, 1, "", fmt_text)
-                c = 2
-                if not hide_vendor:
-                    ws2.write(row2, c, m.invoice_user_id.name or "", fmt_text)
-                    c += 1
-                ws2.write(
-                    row2,
-                    c,
-                    selection_move.get(m.move_type, m.move_type),
-                    fmt_text,
-                )
-                c += 1
-                ws2.write_number(row2, c, float(m.amount_total_signed), fmt_money)
-                c += 1
-                ws2.write_number(row2, c, float(m.amount_residual), fmt_money)
-                c += 1
-                ws2.write(
-                    row2,
-                    c,
-                    selection_pay.get(m.payment_state, m.payment_state),
-                    fmt_text,
-                )
-                row2 += 1
-            row2 += 1
-
-        row2 += 1
-        ws2.merge_range(row2, 0, row2, last_col_g, _("Resumen (totales del informe)"), fmt_section)
-        row2 += 1
-        ws2.write(row2, 0, _("TOTAL FIRMADO"), fmt_tot_label)
-        ws2.write_number(row2, 1, float(total_firmado), fmt_tot_num)
-        row2 += 1
-        ws2.write(row2, 0, _("TOTAL ADEUDADO (saldo pendiente)"), fmt_tot_label)
-        ws2.write_number(row2, 1, float(total_saldo), fmt_tot_num)
-        row2 += 1
-        ws2.write(row2, 0, _("Cantidad de comprobantes (FC / NC)"), fmt_tot_label)
-        ws2.write_number(row2, 1, n_docs, fmt_tot_int)
-
-        ws2.set_column(0, 0, 22)
-        ws2.set_column(1, 1, 12)
-        if not hide_vendor:
-            ws2.set_column(2, 2, 22)
-            ws2.set_column(3, 3, 28)
-            ws2.set_column(4, 5, 16)
-            ws2.set_column(6, 6, 18)
-        else:
-            ws2.set_column(2, 2, 28)
-            ws2.set_column(3, 4, 16)
-            ws2.set_column(5, 5, 18)
-
+    def _export_xlsx_bytes(self, moves):
+        """Hoja 1 = layout PDF; hoja 2 = tabla plana para Excel."""
+        self.ensure_one()
+        hide_vendor = bool(self.user_id)
+        buf = io.BytesIO()
+        wb = xlsxwriter.Workbook(buf, {"in_memory": True})
+        fmts = self._export_xlsx_build_formats(wb)
+        ws1 = wb.add_worksheet(_("Informe (PDF)")[:31])
+        self._export_xlsx_write_sheet_pdf_layout(ws1, moves, hide_vendor, fmts)
+        ws2 = wb.add_worksheet(_("Detalle plano")[:31])
+        self._export_xlsx_write_sheet_flat(ws2, moves, hide_vendor, fmts)
         wb.close()
         return buf.getvalue()
 
@@ -674,6 +984,35 @@ class ClientesCcInformeWizard(models.TransientModel):
         for key, val in self._export_xlsx_meta_lines():
             writer.writerow([key, val])
         writer.writerow([])
+        g = self._pdf_global_from_moves(moves)
+        currency = self.company_id.currency_id
+        if g.get("has_opening"):
+            resumen_csv = _(
+                "Clientes con movimientos: %(pc)s — Documentos: %(dc)s — "
+                "Total importes (firmado): %(tf)s — Adeudado listado: %(sr)s — "
+                "Saldo inicial (FC/NC antes del «desde»): %(so)s — Adeudado total: %(st)s"
+            ) % {
+                "pc": g["partner_count"],
+                "dc": g["document_count"],
+                "tf": formatLang(self.env, g["sum_total_signed"], currency_obj=currency),
+                "sr": formatLang(self.env, g["sum_residual"], currency_obj=currency),
+                "so": formatLang(self.env, g["sum_opening_residual"], currency_obj=currency),
+                "st": formatLang(
+                    self.env, g["sum_residual_with_opening"], currency_obj=currency
+                ),
+            }
+        else:
+            resumen_csv = _(
+                "Clientes con movimientos: %(pc)s — Documentos: %(dc)s — "
+                "Total importes (firmado): %(tf)s — Saldo pendiente total: %(sr)s"
+            ) % {
+                "pc": g["partner_count"],
+                "dc": g["document_count"],
+                "tf": formatLang(self.env, g["sum_total_signed"], currency_obj=currency),
+                "sr": formatLang(self.env, g["sum_residual"], currency_obj=currency),
+            }
+        writer.writerow([_("Resumen general"), resumen_csv])
+        writer.writerow([])
         if hide_vendor:
             writer.writerow(
                 [
@@ -683,7 +1022,7 @@ class ClientesCcInformeWizard(models.TransientModel):
                     _("Tipo"),
                     _("Total firmado"),
                     _("Saldo"),
-                    _("Estado pago"),
+                    _("Cobro"),
                 ]
             )
         else:
@@ -696,7 +1035,7 @@ class ClientesCcInformeWizard(models.TransientModel):
                     _("Tipo"),
                     _("Total firmado"),
                     _("Saldo"),
-                    _("Estado pago"),
+                    _("Cobro"),
                 ]
             )
         for r in rows:
@@ -728,15 +1067,37 @@ class ClientesCcInformeWizard(models.TransientModel):
                     ]
                 )
         writer.writerow([])
-        writer.writerow([_("TOTAL FIRMADO"), f"{total_firmado:.2f}".replace(".", ",")])
-        writer.writerow([_("TOTAL ADEUDADO (saldo)"), f"{total_saldo:.2f}".replace(".", ",")])
+        if self.date_from:
+            writer.writerow(
+                [
+                    _("SALDO INICIAL (FC/NC antes del «desde»)"),
+                    f"{self.sum_opening_residual:.2f}".replace(".", ","),
+                ]
+            )
+        writer.writerow(
+            [_("TOTAL FIRMADO (documentos listados)"), f"{total_firmado:.2f}".replace(".", ",")]
+        )
+        writer.writerow(
+            [
+                _("ADEUDADO (solo documentos listados)"),
+                f"{total_saldo:.2f}".replace(".", ","),
+            ]
+        )
+        if self.date_from:
+            writer.writerow(
+                [
+                    _("ADEUDADO TOTAL (inicial + listado)"),
+                    f"{self.sum_residual_with_opening:.2f}".replace(".", ","),
+                ]
+            )
         writer.writerow([_("Cantidad de comprobantes"), str(n_docs)])
         return buf.getvalue().encode("utf-8-sig")
 
     def action_export_excel(self):
         self.ensure_one()
         moves = self._search_moves()
-        if not moves:
+        opening = self.sum_opening_residual
+        if not moves and not (self.date_from and opening):
             raise UserError(_("No hay documentos para exportar con los filtros actuales."))
         if xlsxwriter:
             content = self._export_xlsx_bytes(moves)

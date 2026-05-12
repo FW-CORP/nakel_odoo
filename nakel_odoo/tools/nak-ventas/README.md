@@ -10,7 +10,7 @@ Material de trabajo para flujos donde la **cotización/pedido** está en compañ
 
 | Archivo | Descripción |
 |--------|-------------|
-| [MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md](MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md) | Traslado interno **CEN/Existencias → CEN/Roturas 2** según nombres de `sale.order`; política: mover **lo disponible**. |
+| [MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md](MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md) | Traslado interno **CEN/Existencias → CEN/Roturas 2** según `sale.order` NAK; por defecto solo cotizaciones con etiqueta **`procesar`**; con **`--apply`** marca **`ProcesadaNN`** y quita **`procesar`**. Incluye **referencia `master_dev`** (`crm.tag` por `id`, compañías). |
 | [scripts/mover_disponible_pedidos_a_roturas2_master_dev.py](scripts/mover_disponible_pedidos_a_roturas2_master_dev.py) | Script XML-RPC (dry-run / apply). |
 | [CRON_DESECHO_ROTURAS2_MASTER_DEV.md](CRON_DESECHO_ROTURAS2_MASTER_DEV.md) | Acción planificada para **desechar** lo acumulado en Roturas 2 (CEN + B3) vía `stock.scrap`. |
 
