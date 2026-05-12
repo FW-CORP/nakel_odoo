@@ -12,3 +12,13 @@ https://nakel.net.ar/odoo/apps/1414/ir.module.module/1414
 https://nakel.net.ar/odoo/apps/1399/ir.module.module/1399
 https://nakel.net.ar/odoo/apps/1441/ir.module.module/1441
 https://nakel.net.ar/odoo/apps/1406/ir.module.module/1406
+
+
+
+========== fury =================
+Para precios de proveedor - costo -
+https://github.com/OCA/product-attribute/tree/18.0/product_pricelist_supplierinfo
+
+Informacion de cambio de precio - check suplier info - 
+https://github.com/OCA/account-invoicing/tree/18.0/account_invoice_supplierinfo_update
+

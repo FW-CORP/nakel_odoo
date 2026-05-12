@@ -55,6 +55,17 @@ class StockPickingBatch(models.Model):
         compute="_compute_nakel_wave_health",
     )
 
+    def _nakel_wave_sale_order_ids(self):
+        """OV ligadas a la ola: `nakel_wave_batch_id` en la OV **o** `sale_id` en pickings del batch.
+
+        No basta con `picking_ids.mapped('sale_id')`: si se sacan pickings del batch pero las OV
+        siguen con `nakel_wave_batch_id` (recompute no limpia), o hay mezcla OUT/PICK, el contador
+        «OV (ola)» y el smartbutton quedaban en **1** aunque la ola involucre más OV.
+        """
+        self.ensure_one()
+        from_pickings = self.picking_ids.mapped("sale_id").filtered(lambda s: s)
+        return (self.nakel_wave_sale_ids | from_pickings)
+
     def _nakel_out_picking_types_for_batch(self):
         self.ensure_one()
         Ptype = self.env["stock.picking.type"]
@@ -68,17 +79,23 @@ class StockPickingBatch(models.Model):
             ptypes = Ptype.search([("sequence_code", "=", "OUT")])
         return ptypes
 
-    @api.depends("picking_ids", "picking_type_id", "picking_type_id.warehouse_id")
+    @api.depends(
+        "picking_ids",
+        "picking_ids.sale_id",
+        "nakel_wave_sale_ids",
+        "picking_type_id",
+        "picking_type_id.warehouse_id",
+    )
     def _compute_nakel_ola_counts(self):
         Picking = self.env["stock.picking"]
         for batch in self:
             # `sale_id` en stock.picking proviene de `sale_stock`.
             # En entornos donde no exista (o durante upgrades parciales), evitamos depender de ese campo.
             if "sale_id" in Picking._fields:
-                sales = batch.picking_ids.mapped("sale_id").filtered(lambda s: s)
+                sales = batch._nakel_wave_sale_order_ids()
                 so_ids = sales.ids
             else:
-                so_ids = []
+                so_ids = batch.nakel_wave_sale_ids.ids
             batch.nakel_sale_order_count = len(so_ids)
             ptypes = batch._nakel_out_picking_types_for_batch()
             if so_ids and ptypes:
@@ -92,11 +109,9 @@ class StockPickingBatch(models.Model):
                 batch.nakel_out_picking_count = 0
 
     def action_nakel_open_sale_orders(self):
-        """Solo OV cuyo PICK está en esta ola (mismo criterio que el armado de la ola)."""
+        """Todas las OV ligadas a la ola (campo en OV y/o `sale_id` en pickings del batch)."""
         self.ensure_one()
-        so_ids = list(
-            {sid for sid in self.picking_ids.mapped("sale_id").ids if sid}
-        )
+        so_ids = self._nakel_wave_sale_order_ids().ids
         return {
             "name": "Órdenes de venta (ola)",
             "type": "ir.actions.act_window",
@@ -109,11 +124,9 @@ class StockPickingBatch(models.Model):
         }
 
     def action_nakel_open_out_pickings(self):
-        """Entregas OUT a validar: mismas OV que componen la ola (sale_id vía PICKs de la ola)."""
+        """Entregas OUT a validar: mismas OV que componen la ola (unión OV enlace + pickings)."""
         self.ensure_one()
-        so_ids = list(
-            {sid for sid in self.picking_ids.mapped("sale_id").ids if sid}
-        )
+        so_ids = self._nakel_wave_sale_order_ids().ids
         ptypes = self._nakel_out_picking_types_for_batch()
         dom = [
             ("picking_type_id", "in", ptypes.ids),

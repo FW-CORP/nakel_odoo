@@ -30,3 +30,5 @@ En ese caso:
 
 > Nota: si la OLA ya está en `done`, el faltante no se “agrega” a esa ola: se corrige generando el movimiento/picking correspondiente después de disponer stock en la ubicación correcta.
 
+Ver también: [OV sin facturar / sin OUT tras ola o Barcode](OV_SIN_FACTURAR_SIN_OUT_TRAS_OLA.md) (cadena PICK→OUT, `invoice_status`, script `out_por_ov_master_dev.py`).
+
