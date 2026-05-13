@@ -22,3 +22,6 @@ https://github.com/OCA/product-attribute/tree/18.0/product_pricelist_supplierinf
 Informacion de cambio de precio - check suplier info - 
 https://github.com/OCA/account-invoicing/tree/18.0/account_invoice_supplierinfo_update
 
+========= IA Lista de Precios Proveedores ============
+
+https://github.com/FW-CORP/Nakel_IA_Compras

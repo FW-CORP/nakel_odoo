@@ -1,6 +1,6 @@
 ---
 title: ARCA Retenciones — layouts y mapeo a Odoo (solo lectura)
-updated: 2026-04-23
+updated: 2026-05-12
 ---
 
 ## Objetivo
@@ -139,14 +139,14 @@ Detalle observado (longitudes reales del layout del contador):
 Este layout se parece al caso SICORE/Ganancias (código impuesto 0217) pero con campos del estudio:
 
 - **Terminador de línea**: usar **CRLF** (`\r\n`) como en las muestras (SIAP/SICORE puede rechazar el archivo si no coincide el “largo de registro” esperado).
-- **`nro_orden` (pos. 17–28, 12 chars)**: se compone como **PV(4) + NRO(8)** tomado de la **factura proveedor** (`account.move.ref` tipo `0388-00386471`). Si no hay `PV-NRO` parseable, se usa fallback numérico.
+- **`nro_orden` (pos. 17–28, 12 chars)**: en las muestras SIAP aceptadas va **solo con dígitos `0-9`** (sin letras tipo `PGAL…`). Con facturas reconciliadas en Odoo se arma **PV(4)+NRO(8)** desde la factura (`_pv_nro_12_from_bill`). Sin facturas: **todos los dígitos** del nombre del pago en orden, relleno a 12 con ceros a la izquierda y, si sobran, **últimos 12** (`generar_rgan_cpa_master_dev.py`: `_nro_orden_12_rgan_solo_digitos`).
 - `codigo_8` observado: `02170781`
 - `jurisd_3` observado: `010`
 - `cuit13` observado: `80` + CUIT(11)
 
 **Origen en Odoo**:
 - mismas fuentes de retención, pero filtrando `account.tax.l10n_ar_tax_type == 'earnings'`.
-- nro_orden/nro_comprobante (si el estudio lo acepta): `account.payment.name` normalizado sin `/` ni `-` (y recortado/padded al ancho del layout).
+- nro_orden: con factura **solo dígitos** PV+NRO; sin factura, dígitos del nombre de pago (ver arriba); no usar letras en pos. 17–28 para SIAP.
 
 ### D) SIRCAR (ancho fijo 163)
 
@@ -276,4 +276,23 @@ Antes de usar en producción:
   - fijos por régimen,
   - o parametrizables por jurisdicción.
 - Importar un set de prueba en el aplicativo y revisar `errimpret.log` si rechaza.
+
+---
+
+## Excel de apuntes (`account.move.line`) → TXT SICORE v9 (sin Odoo)
+
+Si ya exportaste desde Odoo el listado **Apunte contable** (columnas en español: *Contacto*, *Crédito*, *Fecha*, *Número*, *Impuesto del emisor*, *Cuenta* con “SICORE”, etc.), podés generar TXT **sin conectar a `master_dev`** con:
+
+- Script: `ARCA-RETENCIONES/SICORE/xlsx_apunte_to_sicore_v9.py`
+- **`--formato sicore159`** (default): registro de **159** posiciones + CRLF, criterio `generar_sicore_v9_retenciones.py`.
+- **`--formato rgan145`**: registro de **145** posiciones + CRLF, criterio `SICORE/tools/generar_rgan_cpa_master_dev.py` — mismo estilo que los **`RGAN_CPA_SIAP_*.TXT`** del repo (montos con **coma**). SIAP / estudio suelen pedir este cuando el importador es el de **RGAN CPA** y no el de SICORE v9 “puro”.
+
+**Cómo saber cuál pedir:** abrí una muestra que el contador haya importado bien: si cada línea mide **145** y los importes llevan **coma** decimal → `rgan145`. Si mide **159** y los montos van **solo con dígitos** (centavos al final, sin coma) → `sicore159`.
+
+- Requisito: `openpyxl` en un venv.
+- El export de apuntes **no incluye CUIT**: `--emitir-cuit-template mapa.csv`, completá `cuit`, `--cuit-csv mapa.csv`.
+- **Base imponible** no viene en ese Excel: por defecto **0**; opcional `--base-igual-retencion` si el contador lo acepta.
+- **Importe total / comprobante**: por defecto = retención si no hay otra columna; `--importe-comprobante-columna` para ambos formatos si agregás el dato al Excel.
+- Validación: `--validar` (checks distintos según `--formato`).
+- Para **reutilizar líneas ya aceptadas en SIAP** y solo completar lo nuevo: `SICORE/tools/rgan145_desde_apunte_y_modelo.py` (copia la línea del TXT modelo cuando coincide fecha + importe retención; el resto arma RGAN desde Excel + CSV de CUIT).
 
