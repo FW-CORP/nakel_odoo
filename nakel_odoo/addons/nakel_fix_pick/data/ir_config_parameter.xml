@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+      No usar <record> para ir.config_parameter: la clave (key) es única en toda la BD.
+      Si la clave ya existía sin xml_id de este módulo, -u fallaba con duplicate key.
+      Esta función solo crea filas faltantes; no pisa valores existentes.
+    -->
+    <data noupdate="0">
+        <function model="ir.config_parameter" name="nakel_fix_pick_ensure_default_parameters" />
+    </data>
+</odoo>

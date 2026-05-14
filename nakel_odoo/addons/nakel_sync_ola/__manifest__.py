@@ -2,7 +2,7 @@
 {
     "name": "Nakel Sync Ola + OUT",
     "summary": "Botón en la ola: sincroniza qty_done (reutiliza Nakel Sync Qty Done) y picked en PICK/OUT vinculados por batch_id o nakel_wave_batch_id.",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.0.2",
     "category": "Inventory/Inventory",
     "author": "Nakel",
     "license": "LGPL-3",

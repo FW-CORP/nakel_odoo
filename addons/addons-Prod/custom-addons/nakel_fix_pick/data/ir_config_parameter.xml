@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+      Valores por defecto solo en instalación limpia (noupdate=1: no pisar producción en -u).
+      Claves:
+        - nakel_fix_pick.enable: activa el write() de sincronización picked / qty_done.
+        - nakel_fix_pick.barcode_soft_missing: activa el handler JS (sesión + error_handlers).
+    -->
+    <data noupdate="1">
+        <record id="icp_nakel_fix_pick_enable" model="ir.config_parameter">
+            <field name="key">nakel_fix_pick.enable</field>
+            <field name="value">0</field>
+        </record>
+        <record id="icp_nakel_fix_pick_barcode_soft_missing" model="ir.config_parameter">
+            <field name="key">nakel_fix_pick.barcode_soft_missing</field>
+            <field name="value">0</field>
+        </record>
+    </data>
+</odoo>

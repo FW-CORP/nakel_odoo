@@ -7,9 +7,15 @@ class StockPickingBatch(models.Model):
     _inherit = "stock.picking.batch"
 
     def _nakel_sync_ola_pickings(self):
-        """PICK y OUT pendientes ligados a esta ola (incluye OUT solo con nakel_wave_batch_id)."""
+        """PICK (y traslados no-OUT) pendientes ligados a esta ola.
+
+        Los **OUT** (`sequence_code` = OUT / `CEN/OUT/…`) se **excluyen**: comparten
+        `nakel_wave_batch_id` con la ola pero no son el mismo paso operativo que el
+        recolectar; forzar `quantity → qty_done` y `picked` ahí suele dejar entregas
+        incoherentes con PICK/PACK o con la validación en Barcode.
+        """
         self.ensure_one()
-        return self.env["stock.picking"].search(
+        pickings = self.env["stock.picking"].search(
             [
                 "|",
                 ("batch_id", "=", self.id),
@@ -17,11 +23,12 @@ class StockPickingBatch(models.Model):
                 ("state", "not in", ("done", "cancel")),
             ]
         )
+        return pickings.filtered(lambda p: not p._nakel_is_out_picking(p))
 
     def action_nakel_sync_ola_full(self):
         """
         Supervisor: para la ola actual,
-        1) en cada picking vinculado, copia quantity -> qty_done donde qty_done sigue en 0
+        1) en cada picking vinculado **que no sea OUT**, copia quantity -> qty_done donde qty_done sigue en 0
            (misma lógica que nakel_stock_sync_qty_done);
         2) marca picked=True en líneas con quantity>0 y picked=False.
 

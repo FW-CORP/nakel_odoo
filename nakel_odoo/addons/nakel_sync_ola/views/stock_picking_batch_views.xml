@@ -7,14 +7,15 @@
         <field name="priority" eval="36"/>
         <field name="arch" type="xml">
             <xpath expr="//header//button[@name='action_done']" position="before">
+                <!-- Visible también en ola done/cancel: los PICK suelen seguir con nakel_wave_batch_id
+                     y quedar assigned tras validar la ola sin cerrar líneas (reposición SYNC sin reabrir la ola). -->
                 <button
                     name="action_nakel_sync_ola_full"
                     type="object"
                     string="SYNC Ola+OUT"
                     class="btn-secondary"
                     groups="stock.group_stock_user"
-                    invisible="state in ('done','cancel')"
-                    help="Sincroniza quantity→qty_done y picked en todos los PICK/OUT de esta ola (batch_id o nakel_wave_batch_id). No valida. Complementa el SYNC de Barcode (nakel_fix_pick) sin reemplazarlo."
+                    help="Sincroniza quantity→qty_done y picked en traslados de la ola excepto OUT (batch_id o nakel_wave_batch_id). Los CEN/OUT no se tocan aquí. No valida. Complementa Barcode (nakel_fix_pick)."
                 />
             </xpath>
         </field>

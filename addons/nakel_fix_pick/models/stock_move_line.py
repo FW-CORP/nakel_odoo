@@ -3,6 +3,15 @@
 from odoo import api, models
 
 
+def _nakel_float_from_vals(vals: dict, key: str):
+    if key not in vals:
+        return None
+    try:
+        return float(vals.get(key) or 0.0)
+    except Exception:
+        return 0.0
+
+
 class StockMoveLine(models.Model):
     _inherit = "stock.move.line"
 
@@ -14,33 +23,43 @@ class StockMoveLine(models.Model):
 
     def write(self, vals):
         """
-        If enabled, keep `picked` consistent when done quantity is set.
+        If enabled, keep `picked` (and often `qty_done`) consistent when Barcode writes quantities.
 
         Rationale (observed in Nakel):
-        - In Barcode, users effectively "do" lines by setting done quantities.
-        - If `picked` is left False while done quantities are set, Barcode can display 0/… and block operation.
+        - Barcode puede mandar `picked: False` junto con cantidad > 0; la guarda antigua
+          (`if "picked" not in vals`) saltaba y dejaba datos incoherentes.
+        - A veces solo llega `quantity`; si queda `qty_done` en 0, la UI puede mostrar 0 / … tras refresh.
 
-        Important: `quantity` on stock.move.line is NOT the done quantity; it's typically the reserved/initial
-        quantity for the operation. We therefore prefer `qty_done` when available.
+        Nota: `quantity` es la reserva operativa; `qty_done` es lo hecho. Solo copiamos
+        `quantity` -> `qty_done` cuando hay cantidad > 0 y `qty_done` no viene positivo en `vals`.
         """
-        enabled = self._nakel_fix_pick_enabled()
-        if enabled and "picked" not in vals:
-            # Prefer real done qty when it's being written.
-            if "qty_done" in vals:
-                try:
-                    done = float(vals.get("qty_done") or 0.0)
-                except Exception:
-                    done = 0.0
-                vals = dict(vals)
-                vals["picked"] = done > 0
-            # Fallback for installations/custom flows that write `quantity` as done quantity.
-            elif "quantity" in vals:
-                try:
-                    qty = float(vals.get("quantity") or 0.0)
-                except Exception:
-                    qty = 0.0
-                vals = dict(vals)
-                vals["picked"] = qty > 0
+        if not self._nakel_fix_pick_enabled():
+            return super().write(vals)
+
+        keys = ("qty_done", "quantity", "picked")
+        if not any(k in vals for k in keys):
+            return super().write(vals)
+
+        vals = dict(vals)
+        qd = _nakel_float_from_vals(vals, "qty_done") if "qty_done" in vals else None
+        qt = _nakel_float_from_vals(vals, "quantity") if "quantity" in vals else None
+
+        # Cantidad "hecha" implícita: el máximo positivo entre lo que venga en qty_done y quantity.
+        # Cubre el caso Barcode: qty_done=0 y quantity=5 en el mismo write.
+        positives = [v for v in (qd, qt) if v is not None and v > 0.0]
+        max_positive = max(positives) if positives else None
+
+        if max_positive is not None and max_positive > 0.0:
+            vals["picked"] = True
+            if qt is not None and qt > 0.0 and (qd is None or qd <= 0.0):
+                vals["qty_done"] = qt
+        elif qd is not None and qd <= 0.0 and (qt is None or qt <= 0.0):
+            if "picked" not in vals:
+                vals["picked"] = False
+        elif qt is not None and qt <= 0.0 and qd is None:
+            if "picked" not in vals:
+                vals["picked"] = False
+
         return super().write(vals)
 
     @api.model
@@ -71,4 +90,3 @@ class StockMoveLine(models.Model):
             "updated": len(lines),
             "limited": bool(limit),
         }
-

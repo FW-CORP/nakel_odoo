@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from odoo import fields, models
+from odoo import _, fields, models
+from odoo.exceptions import UserError
+from odoo.tools.float_utils import float_compare, float_is_zero
 
 
 class SaleOrder(models.Model):

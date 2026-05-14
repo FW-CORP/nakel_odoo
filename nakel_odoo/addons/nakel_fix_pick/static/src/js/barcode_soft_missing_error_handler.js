@@ -13,7 +13,9 @@ import { session } from "@web/session";
  *
  * If session flag nakel_fix_pick_soft_missing is true (see ir.config_parameter
  * nakel_fix_pick.barcode_soft_missing), replace the blocking dialog with a short
- * warning and reload the webclient so Barcode re-fetches fresh ids.
+ * warning and reload the webclient when the error is clearly tied to
+ * save_barcode_data (so Barcode can re-fetch fresh ids). Other MissingErrors
+ * (e.g. during Validar) are left to Odoo's default handling to avoid reload loops.
  */
 function nakelFixPickSoftMissingHandler(env, error, originalError) {
     if (!(error instanceof UncaughtPromiseError)) {
@@ -40,6 +42,17 @@ function nakelFixPickSoftMissingHandler(env, error, originalError) {
             msg
         );
     if (!looksMissing) {
+        return false;
+    }
+    // Solo recargar cuando el fallo viene claramente del guardado Barcode.
+    // Si recargamos ante cualquier MissingError (p. ej. Validar / action_done),
+    // el reload corta el RPC y el operador entra en bucle con el toast de “referencia desactualizada”.
+    const debug = typeof data === "object" && data && data.debug != null ? String(data.debug) : "";
+    const anchoredInSave =
+        /save_barcode_data/i.test(debug) ||
+        /save_barcode_data/i.test(msg) ||
+        /\/stock_barcode\/save_barcode_data/i.test(String(originalError?.url || ""));
+    if (!anchoredInSave) {
         return false;
     }
     error.unhandledRejectionEvent?.preventDefault?.();
