@@ -12,4 +12,12 @@
         <field name="category_id" ref="module_category_nakel_cc_detalle"/>
         <field name="comment">Botón en contacto + menú Ventas → Órdenes → Cuentas corrientes (mis ventas); dominio invoice_user_id = usuario.</field>
     </record>
+
+    <!-- Solo preventistas / comerciales sin contabilidad completa: ir.rule + ACL de account.payment.
+         No asignar a Administración ni Facturación/Contabilidad (chocaba con smartbutton Pagos). -->
+    <record id="group_cc_payment_restricted" model="res.groups">
+        <field name="name">Nakel: cobros CC filtrados (mis FC/NC)</field>
+        <field name="category_id" ref="module_category_nakel_cc_detalle"/>
+        <field name="comment">Lectura de account.payment limitada a cobros de facturas donde invoice_user_id = yo. Se asigna automáticamente con CC mis ventas salvo Ajustes o Contabilidad.</field>
+    </record>
 </odoo>

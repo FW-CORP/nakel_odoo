@@ -6,14 +6,13 @@
             <field name="name">Nakel CC: pagos ligados a mis facturas/NC</field>
             <field name="model_id" ref="account.model_account_payment"/>
             <!--
-                Solo aplica a usuarios del grupo «Nakel CC / mis ventas» (group_cc_my_sales).
-                NO incluir Ventas / Vendedor ni Responsable: los contadores suelen tener esos grupos y
-                la regla chocaba con lecturas estándar (smartbutton Pagos, borradores RE-X, OP, etc.).
-                Los vendedores sin contabilidad no debían ver todos los pagos: se revocó el perm_read
-                extra en account_payment_access.xml (solo queda lectura explícita para el grupo CC).
+                Solo group_cc_payment_restricted (no group_cc_my_sales): administradores y
+                contadores suelen tener CC mis ventas para probar menús pero deben ver todos los pagos.
+                El hook sync_cc_payment_restricted_groups asigna este grupo solo a comerciales sin
+                Ajustes del sistema ni Contabilidad / Facturación.
             -->
             <field name="domain_force">['|', '|', ('partner_type', '=', 'supplier'), ('create_uid', '=', user.id), ('reconciled_invoice_ids.invoice_user_id', '=', user.id)]</field>
-            <field name="groups" eval="[(6, 0, [ref('clientes_cc_detalle.group_cc_my_sales')])]"/>
+            <field name="groups" eval="[(6, 0, [ref('clientes_cc_detalle.group_cc_payment_restricted')])]"/>
         </record>
     </data>
 </odoo>

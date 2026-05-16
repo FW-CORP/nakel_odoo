@@ -5,14 +5,14 @@
         <record id="access_clientes_cc_account_payment_read" model="ir.model.access">
             <field name="name">clientes_cc account.payment read (Nakel CC)</field>
             <field name="model_id" ref="account.model_account_payment"/>
-            <field name="group_id" ref="clientes_cc_detalle.group_cc_my_sales"/>
+            <field name="group_id" ref="clientes_cc_detalle.group_cc_payment_restricted"/>
             <field name="perm_read" eval="1"/>
             <field name="perm_write" eval="0"/>
             <field name="perm_create" eval="0"/>
             <field name="perm_unlink" eval="0"/>
         </record>
         <!-- Revocados: daban lectura global + regla ir.rule a vendedores y chocaban con contabilidad.
-             Quien debe ver cobros filtrados en CC debe tener group_cc_my_sales (ACL de arriba + regla). -->
+             Quien debe ver cobros filtrados en CC: group_cc_my_sales + group_cc_payment_restricted (hook). -->
         <record id="access_clientes_cc_account_payment_read_salesman" model="ir.model.access">
             <field name="name">clientes_cc account.payment read (vendedor) — desactivado</field>
             <field name="model_id" ref="account.model_account_payment"/>

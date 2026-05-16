@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_ar_register_payments" model="ir.ui.view">
+        <field name="name">ar.register.payments</field>
+        <field name="model">ar.register.payments</field>
+        <field name="arch" type="xml">
+            <form string="Ar Register Payments" create="false">
+                <header>
+                    <div style="margin-left: 1300px;">
+                        <button string="Create Payment" name="create_payment" type="object" class="btn btn-primary" invisible="is_executed"/>
+                    </div>
+                </header>
+                <sheet>
+                    <div class="oe_title" invisible="not payment_order_number">
+                        <h1>
+                            <field name="payment_order_number" readonly="is_executed"/>
+                        </h1>
+                    </div>
+                    <div name="button_box" class="oe_button_box">
+                        <button name="action_view_payments" class="oe_stat_button" icon="fa-bars" type="object" invisible="not created_account_payment_ids">
+                            <field name="payment_count" string="Payments" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="move_ids" widget="many2many_tags" options="{'no_create': True, 'no_open': True}" invisible="0" readonly="0"/>
+                            <field name="created_account_payment_ids" widget="many2many_tags" options="{'no_create': True, 'no_open': True}" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="payment_date" readonly="is_executed" class="oe_inline"/>
+                            <field name="is_executed" invisible="1" readonly="0"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="payment_type" invisible="1"/>
+                        <field name="partner_type" invisible="1"/>
+                        <field name="company_id" invisible="1"/>
+                        <field name="company_currency_id" invisible="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Payment Lines">
+                            <group>
+                                <field name="payment_lines" nolabel="1" readonly="is_executed"><!--O2M-->
+                                    <list editable="bottom"><!--create="false" edit="true" delete="true"-->
+                                        <field name="id" optional="hide"/>
+                                        <field name="payment_id" column_invisible="1"/><!--O2M-->
+                                        <field name="partner_type" column_invisible="1"/>
+                                        <field name="company_id" column_invisible="1"/>
+                                        <field name="partner_id" force_save="1" column_invisible="1"/>
+                                        <field name="invoice_id" domain="[('id', 'in', parent.move_ids)]" options="{'no_create': True, 'no_open': True}"/>
+                                        <field name="move_currency_id" options="{'no_create': True, 'no_open': True}" optional="hide"/>
+                                        <field name="invoice_date" force_save="1" optional="show"/>
+                                        <field name="date_due" force_save="1" optional="hide"/>
+                                        <field name="payment_date" force_save="1" optional="show"/>
+                                        <field name="ref" optional="hide"/>
+                                        <field name="journal_id" required="1" options="{'no_create': True, 'no_open': True}"/>
+                                        <field name="available_journal_ids" widget="many2many_tags" column_invisible="1"/>
+                                        <field name="payment_method_line_id" required="1" force_save="1" options="{'no_create': True, 'no_open': True}"/>
+                                        <field name="payment_method_code" invisible="1" optional="hide"/>
+                                        <field name="amount_total" force_save="1" optional="show" /><!--sum="amount_total"-->
+                                        <field name="amount_due" force_save="1" optional="show" /><!--sum="amount_due"-->
+                                        <field name="amount" optional="show" sum="amount"/>
+                                        <field name="currency_id" optional="hide"/>
+                                        <field name="l10n_ar_withholding_amount_total" optional="show" sum="l10n_ar_withholding_amount_total"/><!--force_save="1" not working-->
+                                        <field name="l10n_ar_net_amount" optional="show" sum="l10n_ar_net_amount"/>
+                                        <field name="communication" optional="show"/>
+                                        <field name="created_account_payment_id" optional="hide"/>
+                                        <!-- ✅ BUTTON -->
+                                        <button name="action_open_withholding"
+                                                type="object"
+                                                string="Withholding"
+                                                class="btn-primary" invisible="id == False"
+                                                context="{'allowed_move_ids': parent.move_ids}"/><!--invisible="not l10n_ar_withholding_ids"-->
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <group>
+                            <field name="line_ids" invisible="1"/>
+                        </group>
+                    </notebook>
+                    <field name="line_ids" widget="one2many_tags" options="{'no_create': True}" invisible="1"/>
+                </sheet>
+           </form>
+        </field>
+    </record>
+
+    <record id="view_ar_register_payments_tree" model="ir.ui.view">
+        <field name="name">ar.register.payments.tree</field>
+        <field name="model">ar.register.payments</field>
+        <field name="arch" type="xml">
+            <list string="AR Register Payments" default_order="payment_order_number desc" create="false">
+                <field name="id" optional="hide"/>
+                <field name="create_date" optional="hide"/>
+                <field name="payment_order_number"/>
+                <!--field name="name"/-->
+                <field name="partner_id"/>
+                <field name="payment_date"/>
+                <field name="partner_type"/>
+                <field name="payment_type"/>
+                <!--field name="company_id" optional="show"/>
+                <field name="move_ids" widget="many2many_tags"/-->
+                <!--field name="company_currency_id"/-->
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ar_register_payments_search" model="ir.ui.view">
+        <field name="name">ar.register.payments.search</field>
+        <field name="model">ar.register.payments</field>
+        <field name="arch" type="xml">
+            <search string="Search AR Register Payments">
+                <!-- 🔍 Quick Search -->
+                <field name="payment_order_number" string="Payment Order"/>
+                <field name="partner_id"/>
+                <field name="payment_date"/>
+
+                <!-- 🔎 Filters -->
+                <filter name="filter_customer" string="Customer" domain="[('partner_type', '=', 'customer')]"/>
+                <filter name="filter_vendor" string="Vendor" domain="[('partner_type', '=', 'supplier')]"/>
+                <separator/>
+                <filter name="filter_inbound" string="Inbound (Receive)" domain="[('payment_type', '=', 'inbound')]"/>
+                <filter name="filter_outbound" string="Outbound (Send)" domain="[('payment_type', '=', 'outbound')]"/>
+                <separator/>
+
+                <filter name="filter_has_payments" string="With Payments" domain="[('created_account_payment_ids', '!=', False)]"/>
+                <filter name="filter_no_payments" string="Without Payments" domain="[('created_account_payment_ids', '=', False)]"/>
+                <separator/>
+                <field name="company_id"/>
+
+                <!-- 📊 Group By -->
+                <group expand="0" string="Group By">
+                    <filter name="group_partner" string="Partner" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_payment_type" string="Payment Type" context="{'group_by': 'payment_type'}"/>
+                    <filter name="group_partner_type" string="Customer/Vendor" context="{'group_by': 'partner_type'}"/>
+                    <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
+                    <filter name="group_date" string="Payment Date" context="{'group_by': 'payment_date'}"/>
+                    <!--filter name="group_executed" string="Execution Status" context="{'group_by': 'is_executed'}"/-->
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <menuitem id="menu_ar_register_payments_root"
+          name="AR Register Payments"
+          parent="account.menu_finance_entries"
+          groups="account.group_account_user"
+          sequence="1000"/>
+
+    <record id="action_ar_register_payments_customer" model="ir.actions.act_window">
+        <field name="name">Customer Payments</field>
+        <field name="res_model">ar.register.payments</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('partner_type','=','customer'),('is_executed','=',True)]</field>
+    </record>
+    <menuitem id="menu_ar_register_payments_customer"
+          name="Customer Payments"
+          parent="menu_ar_register_payments_root"
+          action="action_ar_register_payments_customer"
+          sequence="1"/>
+
+    <record id="action_ar_register_payments_vendor" model="ir.actions.act_window">
+        <field name="name">Vendor Payments</field>
+        <field name="res_model">ar.register.payments</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('partner_type','=','supplier'),('is_executed','=',True)]</field>
+    </record>
+    <menuitem id="menu_ar_register_payments_vendor"
+          name="Vendor Payments"
+          parent="menu_ar_register_payments_root"
+          action="action_ar_register_payments_vendor"
+          sequence="2"/>
+
+
+    <record id="action_ar_register_payment_server" model="ir.actions.server">
+        <field name="name">AR Register Payment</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_view_types">list,form</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_open_ar_register_payment()</field>
+        <field name="groups_id" eval="[(4, ref('account.group_account_invoice'))]"/>
+    </record>
+
+    <!-- Views Payment Lines -->
+    <record id="view_ar_register_payments_line_form" model="ir.ui.view">
+        <field name="name">ar.register.payments.line.form</field>
+        <field name="model">ar.register.payments.line</field>
+        <field name="arch" type="xml">
+            <form string="Payment Line">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="is_executed" invisible="1"/>
+                            <field name="payment_id" readonly="1" invisible="1"/><!--M2O-->
+                            <field name="partner_id" options="{'no_create': True, 'no_open': True}"/>
+                            <!-- <field name="partner_type" column_invisible="1"/> -->
+                        </group>
+                        <group>
+                            <field name="company_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="move_currency_id" options="{'no_create': True, 'no_open': True}"/>
+                        </group>
+                    </group>
+
+                    <!-- Invoice Details -->
+                    <group string="Invoice Information">
+                        <group>
+                            <field name="invoice_id" domain="[('id', 'in', context.get('allowed_move_ids', []))]" options="{'no_create': True, 'no_open': True}" readonly="is_executed"/>
+                            <field name="invoice_date" readonly="1"/>
+                            <field name="date_due" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="ref"/>
+                            <field name="amount_total" readonly="1"/>
+                            <field name="amount_due" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Payment Details -->
+                    <group string="Payment Information">
+                        <group>
+                            <field name="payment_date" readonly="is_executed"/>
+                            <field name="journal_id" required="1" options="{'no_create': True}" readonly="is_executed" />
+                            <field name="payment_method_line_id" required="1" options="{'no_create': True, 'no_open': True}" readonly="is_executed"/>
+                            <field name="payment_method_code" invisible="0"/>
+                        </group>
+                        <group>
+                            <field name="communication" readonly="is_executed"/>
+                            <label for="amount"/>
+                            <div name="amount_div" class="o_row">
+                                <field name="amount" force_save="1" readonly="is_executed"/>
+                                <field name="currency_id" required="1" options="{'no_create': True, 'no_open': True}"/><!--options="{'no_create': True, 'no_open': True}" readonly="0"-->
+                            </div>
+                            <!--field name="amount" readonly="is_executed"/-->
+                            <field name="l10n_ar_withholding_amount_total" string="Total Withholdings"/>
+                            <field name="created_account_payment_id" invisible="not created_account_payment_id"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Checks Section -->
+                        <page name="latam_checks_page" string="Checks" invisible="payment_method_code not in ['in_third_party_checks', 'out_third_party_checks', 
+                            'return_third_party_checks', 'new_third_party_checks', 'own_checks']">
+                            <group name="latam_checks" colspan="2">
+                                <field name="l10n_latam_new_check_ids" invisible="payment_method_code not in ['new_third_party_checks', 'own_checks']" nolabel="1" colspan="2" readonly="is_executed">
+                                    <list editable="bottom">
+                                        <field name="company_id" column_invisible="True"/>
+                                        <field name="currency_id" column_invisible="True"/>
+                                        <field name="name" />
+                                        <field name="bank_id" column_invisible="parent.payment_method_code == 'own_checks'"/>
+                                        <field name="issuer_vat" column_invisible="parent.payment_method_code == 'own_checks'"/>
+                                        <field name="payment_date"/>
+                                        <field name="amount" />
+                                    </list>
+                                </field>
+                                <field name="l10n_latam_move_check_ids" invisible="payment_method_code not in ['in_third_party_checks', 'out_third_party_checks', 'return_third_party_checks']"
+                                    domain="
+                                        [('payment_method_code', '=', 'new_third_party_checks'), ('current_journal_id', '=', journal_id), ('company_id', '=', company_id)]
+                                            if payment_type == 'outbound' else
+                                        [('payment_method_code', '=', 'new_third_party_checks'), ('current_journal_id', '=', False), ('company_id', '=', company_id)]" options="{'no_create': True}"
+                                        nolabel="1" colspan="2" readonly="is_executed">
+                                    <list name="existing_checks">
+                                        <field name="company_id" column_invisible="True"/>
+                                        <field name="currency_id" column_invisible="True"/>
+                                        <field name="name" />
+                                        <field name="bank_id" optional="hide"/>
+                                        <field name="issuer_vat" optional="hide"/>
+                                        <field name="payment_date" optional="show"/>
+                                        <field name="amount"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <!-- Withholding Section -->
+                        <page string="Withholdings" ><!--invisible="not l10n_ar_withholding_ids"-->
+                            <field name="l10n_ar_withholding_ids" nolabel="1" readonly="is_executed">
+                                <list editable="bottom">
+                                    <field name="id" optional="hide"/>
+                                    <field name="is_manual" column_invisible="True" force_save="1"/>
+                                    <field name="payment_line_id" column_invisible="1"/>
+                                    <field name="withholding_sequence_id" column_invisible="True"/>
+                                    <field name="company_id" column_invisible="True"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                    <field name="tax_id" options="{'no_open': True, 'no_create': True}"/>
+                                    <field name="name" readonly="withholding_sequence_id"/>
+                                    <field name="base_amount"/>
+                                    <field name="amount" sum="Total Withholdings Amount"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                    <group col="12">
+                        <group col="8"></group>
+                        <group class="oe_subtotal_footer" colspan="4">
+                            <field name="l10n_ar_net_amount"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!--withholding-->
+    <record id="view_ar_payment_register_withholding_form" model="ir.ui.view">
+        <field name="name">ar.payment.register.withholding.form</field>
+        <field name="model">ar.payment.register.withholding</field>
+        <field name="arch" type="xml">
+            <form string="Withholding">
+                <sheet>
+                    <!-- Header Info -->
+                    <group>
+                        <group>
+                            <field name="payment_line_id" invisible="1" readonly="1"/>
+                            <field name="company_id" readonly="1"/>
+                            <field name="currency_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="tax_id" options="{'no_create': True}"/>
+                            <field name="withholding_sequence_id" readonly="1"/>
+                            <field name="name" readonly="withholding_sequence_id"/>
+                        </group>
+                    </group>
+
+                    <!-- Calculation Section -->
+                    <group string="Calculation">
+                        <group>
+                            <field name="base_amount" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="amount" readonly="1"/>
+                            <field name="is_manual"/>
+                        </group>
+                    </group>
+
+                    <!-- Info Note -->
+                    <group>
+                        <div colspan="2">
+                            <span class="o_form_label">Note:</span>
+                            <p>
+                                The withholding amount is automatically calculated based on the payment amount and tax configuration.
+                            </p>
+                        </div>
+                    </group>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ar_payment_register_withholding_tree" model="ir.ui.view">
+        <field name="name">ar.payment.register.withholding.tree</field>
+        <field name="model">ar.payment.register.withholding</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="payment_line_id"/>
+
+                <!-- add your fields -->
+            </list>
+        </field>
+    </record>
+
+</odoo>
