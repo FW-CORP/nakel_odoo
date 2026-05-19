@@ -1,3 +1,7 @@
 [submodule "usuarios"]
 	path = usuarios
 	url = git@github.com:FW-CORP/Nakel-ACL-PERMS.git
+
+[submodule "arca-retenciones"]
+	path = arca-retenciones
+	url = git@github.com:FW-CORP/arca-retenciones.git
