@@ -47,7 +47,7 @@ sudo -u odoo odoo -c /etc/odoo/odoo.conf -u nakel_picking -d master_test --stop-
 
 ```bash
 # 1. Desplegar (copiar archivos)
-cd /ruta/al/nakel_picking   # ej. vault: nakel/nakel_picking (raíz del addon, donde está deploy.sh)
+cd /ruta/al/repo/addons/nakel_picking   # canónico en FW-CORP/nakel_odoo (donde está deploy.sh)
 ./deploy.sh odoo-ct-nakel
 
 # 2. Actualizar en el servidor (todo en uno)

@@ -5,3 +5,15 @@
 [submodule "arca-retenciones"]
 	path = arca-retenciones
 	url = git@github.com:FW-CORP/arca-retenciones.git
+
+[submodule "inventario"]
+	path = inventario
+	url = git@github.com:FW-CORP/Filtro_olas_nakel.git
+
+[submodule "nakel_scripts"]
+	path = nakel_scripts
+	url = git@github.com:FW-CORP/nakel_scripts.git
+
+[submodule "etiquetas-de-precios"]
+	path = etiquetas-de-precios
+	url = git@github.com:FW-CORP/etiquetas-de-precios.git

@@ -50,3 +50,6 @@ qweb/trash/legacy_repo/QWeb-Modelos-templates/
 # Historial Git de repos que se aplanaron dentro de este árbol (no versionar)
 .git_embedded_backup/
 
+# Clon local del repo independiente; módulo canónico en addons/nakel_picking/
+/nakel_picking/
+

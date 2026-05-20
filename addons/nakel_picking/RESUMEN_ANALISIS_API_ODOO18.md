@@ -84,7 +84,7 @@
 ## Ejecutar análisis
 
 ```bash
-cd inventario/nakel_picking
+cd addons/nakel_picking
 python3 analizar_odoo18_api.py dev --batch-id 45    # dev.nakel.net.ar / master_test
 python3 analizar_odoo18_api.py prod --batch-id 45   # nakel.net.ar / master_18 (según .env)
 ```

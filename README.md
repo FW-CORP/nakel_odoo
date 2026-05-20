@@ -64,6 +64,12 @@ También en `addons/` (p. ej. permisos / UX): `nakel_sale_margin` — restringe 
 - `tools/fix-facom/` (**Arreglo FACOM** en facturas de compra)
   - Ver `tools/fix-facom/RUNBOOK_PRODUCTIVO.md` (dry-run → batch chico → ejecución completa, con rollback por CSV)
 
+## Submódulos y enlaces en GitHub
+
+Carpetas que son **otros repos** (`inventario`, `nakel_scripts`, `usuarios`, etc.) deben estar en [`.gitmodules`](.gitmodules). Si falta la entrada, en GitHub el click no abre el repo hijo. Detalle: [`docs/desarrollo/GIT_SUBMODULOS.md`](docs/desarrollo/GIT_SUBMODULOS.md).
+
+El módulo **`nakel_picking`** no va como submódulo en la raíz: solo **`addons/nakel_picking/`**.
+
 ## Reglas
 
 - **Sin secretos** en git (`.env`, passwords, API keys, dumps).
