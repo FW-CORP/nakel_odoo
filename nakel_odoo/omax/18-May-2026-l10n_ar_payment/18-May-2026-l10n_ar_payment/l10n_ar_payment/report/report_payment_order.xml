@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<template id="report_ar_payment_order">
+    <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="o">
+            <t t-call="web.html_container">
+
+                <style>
+
+                    /* ===== GLOBAL ===== */
+                    body {
+                        margin: 0;
+                        font-family: Arial, Helvetica, sans-serif;
+                        font-size: 15px;
+                        color: #000;
+                    }
+
+                    .page {
+                        padding: 15px 20px;
+                    }
+
+                    /* ===== TITLE ===== */
+                    .po-title-box {
+                        border: 1px solid #000;
+                        text-align: center;
+                        font-weight: bold;
+                        padding: 8px;
+                        font-size: 20px;
+                        margin-bottom: 5px;
+                    }
+
+                    /* ===== BOXES ===== */
+                    .po-box {
+                        border: 1px solid #000;
+                        padding: 6px;
+                        margin-bottom: 10px;
+                    }
+
+                    /* ===== TABLE BASE ===== */
+                    .po-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 11px;
+                        margin-top: 5px;
+                        table-layout: fixed;   /* ✅ Prevent column stretch */
+                    }
+
+                    .po-table th,
+                    .po-table td {
+                        border: 1px solid #000;
+                        padding: 4px;
+                        vertical-align: middle;
+                        word-break: break-word;
+                        white-space: normal;   /* ✅ Allow wrapping */
+                    }
+
+                    .po-table th {
+                        background-color: #f2f2f2;
+                        font-weight: bold;
+                    }
+
+                    /* ===== ALIGNMENT ===== */
+                    .text-right {
+                        text-align: right;
+                    }
+
+                    .text-center {
+                        text-align: center;
+                    }
+
+                    .text-left {
+                        text-align: left;
+                    }
+
+                    .nowrap {
+                        white-space: nowrap;
+                    }
+
+                    .no-border {
+                        border: none !important;
+                    }
+
+                    /* ===== SMALL TEXT ===== */
+                    .small-text {
+                        font-size: 15px;
+                    }
+
+                    /* ===== TOTALS ===== */
+                    .totals {
+                        width: 40%;
+                        margin-left: auto;   /* ✅ Right aligned block */
+                        margin-top: 10px;
+                    }
+
+                    .totals td {
+                        border: none;
+                        padding: 3px;
+                    }
+
+                    .totals-final {
+                        border-top: 2px solid #000;
+                        font-weight: bold;
+                    }
+
+                    /* ===== SIGNATURE ===== */
+                    .signature {
+                        margin-top: 40px;
+                        text-align: center;
+                    }
+
+                    /* ===== IMAGE CONTROL ===== 
+                    img {
+                        max-height: 80px;
+                    }*/
+
+                </style>
+
+                <main>
+                    <div class="page">
+
+                        <!-- HEADER -->
+                        <table style="width:100%; margin-bottom:10px;"><!--border: 1px solid red;-->
+                            <tr>
+
+                                <!-- LEFT SIDE -->
+                                <td style="width:70%; vertical-align:top;">
+
+                                    <table style="width:100%; border:none;">
+                                        <tr>
+
+                                            <!-- LOGO -->
+                                            <td style="width:30%; vertical-align:top; border:none;">
+                                                <img t-if="o.company_id.logo"
+                                                    t-att-src="image_data_uri(o.company_id.logo)"
+                                                    style="height:90px;
+                                                            width:220px;
+                                                            object-fit:contain;"/>
+                                            </td>
+
+                                            <!-- COMPANY INFO -->
+                                            <td style="width:70%; vertical-align:top; border:none; padding-left:10px;">
+
+                                                <div style="font-size: 15px;line-height:20px;">
+
+                                                    <strong>
+                                                        <t t-esc="o.company_id.partner_id.name"/>
+                                                    </strong>
+                                                    <br/>
+
+                                                    <t t-esc="o.company_id.partner_id.street"/>
+                                                    <br/>
+
+                                                    <t t-esc="o.company_id.partner_id.city"/>
+
+                                                    <t t-if="o.company_id.partner_id.state_id">
+                                                        ,
+                                                        <t t-esc="o.company_id.partner_id.state_id.name"/>
+                                                    </t>
+
+                                                    <br/>
+
+                                                    <t t-esc="o.company_id.partner_id.phone"/>
+                                                    <br/>
+
+                                                    <t t-esc="o.company_id.partner_id.email"/>
+
+                                                </div>
+
+                                            </td>
+
+                                        </tr>
+                                    </table>
+
+                                </td>
+
+                                <!-- RIGHT SIDE -->
+                                <td style="width:30%; vertical-align:top;">
+                                    <div class="po-title-box">
+                                        ORDEN DE PAGO
+                                    </div>
+                                    <div class="po-box small-text">
+                                        <table style="width:100%; border:none;">
+                                            <tr>
+                                                <!--Payment Order exe. PO/2026/00014-->
+                                                <td style="border:none;"><strong>Transacción:</strong></td>
+                                                <td class="text-right" style="border:none;"><t t-esc="o.payment_order_number"/></td>
+                                            </tr>
+                                            <tr>
+                                                <!--Payment Order's Payment Date-->
+                                                <td style="border:none;"><strong>Fecha:</strong></td>
+                                                <td class="text-right" style="border:none;"><span t-field="o.payment_date" t-options='{"widget": "date"}'/></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+
+                            </tr>
+                        </table>
+                        
+                        <!-- PARTNER-->
+                        <div class="po-box">
+                            <table style="width:100%;">
+                                <tr><!--PARTNER NAME-->
+                                    <td style="width:20%;"><strong>Razón Social:</strong></td>
+                                    <td style="border-bottom:1px solid #000;"><t t-esc="o.partner_id.name"/></td>
+                                </tr>
+                                <tr><!--PARTNER Address-->
+                                    <td><strong>Domicilio:</strong></td>
+                                    <td style="border-bottom:1px solid #000;"><t t-esc="o.partner_id.contact_address"/></td>
+                                </tr>
+                                <tr><!--Identification Number-->
+                                    <td><strong><t t-esc="o.partner_id.l10n_latam_identification_type_id.name or 'CUIT'"/>:</strong></td>
+                                    <td style="border-bottom:1px solid #000;"><t t-esc="o.partner_id.vat"/></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!--We remit to you the following amounts for the settlement/payment of the invoices:-->
+                        <p>Remitimos a Uds. los siguientes valores en concepto de la cancelación de las facturas:</p>
+
+                        <!-- INVOICES -->
+                        <table class="po-table" style="table-layout: fixed; width:57%; font-size: 15px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:10%;">Fecha</th><!--Document Date-->
+                                    <th style="width:25%;">Comprobante</th><!--Document Number-->
+                                    <th style="width:10%;">Vto.</th><!--Vencimiento (Due Date)-->
+                                    <th style="width:12%;" class="text-right">Importe</th><!--Amount-->
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="o.payment_lines" t-as="line">
+                                    <tr>
+                                        <td class="text-center"><t t-esc="line.invoice_date" t-options='{"widget": "date"}'/></td>
+                                        <td class="text-center"><t t-esc="line.invoice_id.name"/></td>
+                                        <td class="text-center"><t t-esc="line.date_due" t-options='{"widget": "date"}'/></td>
+                                        <td class="text-right"> <t t-esc="line.amount" t-options='{"widget":"monetary","display_currency":line.currency_id}'/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                        <br/>
+
+                        <!-- WITHHOLDINGS -->
+                        <table class="po-table" style="table-layout: fixed; width:72%; font-size: 15px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:15%;">Nro.</th><!--NO. / Withholding certificate number / retention number-->    
+                                    <th style="width:35%;" class="text-left">Impuesto</th><!--Tax-->
+                                    <th style="width:10%;">Fecha</th><!--Date : Payment Date-->
+                                    <th style="width:12%;" class="text-right">Importe</th><!--Amount : Withheld amount-->
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="o.payment_lines" t-as="line">
+                                    <t t-foreach="line.l10n_ar_withholding_ids" t-as="w">
+                                        <tr>
+                                            <td class="text-center"><t t-esc="w.name"/></td>
+                                            <td class="text-left"><t t-esc="w.tax_id.name"/></td>
+                                            <td class="text-center"><t t-esc="w.payment_line_id.payment_date" t-options='{"widget": "date"}'/></td>
+                                            <td class="text-right"><t t-esc="w.amount" t-options='{"widget":"monetary","display_currency":w.currency_id}'/></td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </tbody>
+                        </table>
+                        <br/>
+
+                        <!-- TOTALS -->
+                        <div style="width:72%; margin-top:10px;">
+                            <hr style="border:1px solid #000; margin:0;"/>
+                        </div>
+                        <t t-set="gross" t-value="sum(o.payment_lines.mapped('amount'))"/>
+                        <t t-set="withhold" t-value="sum(o.payment_lines.mapped('l10n_ar_withholding_amount_total'))"/>
+                        <t t-set="net" t-value="sum(o.payment_lines.mapped('l10n_ar_net_amount'))"/>
+
+                        <table style="width:72%; border-collapse:collapse; font-size:15px; margin-top:5px;">
+
+                            <!-- Total Valores -->
+                            <tr>
+                                <td style="width:62%; border:none;"></td><!-- Empty area -->
+                                <td style="width:23%; border:none; padding:4px;">
+                                    <strong>Total Valores:</strong><!-- Gross amount: Total payment value before deductions -->
+                                </td>
+                                <td class="text-right"
+                                    style="width:15%; border:none; padding:4px;">
+                                    <t t-esc="gross"
+                                       t-options='{"widget":"monetary","display_currency":o.company_currency_id}'/>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td style="border:none;"></td>
+                                <td style="border:none; padding:4px;">
+                                    <strong>Retenciones:</strong><!--Sum of taxes withheld: Total withholdings/deductions applied-->
+                                </td>
+                                <td class="text-right"
+                                    style="border:none; padding:4px;">
+                                    <t t-esc="withhold"
+                                       t-options='{"widget":"monetary","display_currency":o.company_currency_id}'/>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td style="border:none;"></td>
+                                <td style="border-top:2px solid #000; padding:6px;">
+                                    <strong>TOTAL ORDEN PAGO:</strong><!--Net payable: Final amount actually paid to vendor-->
+                                </td>
+                                <td class="text-right"
+                                    style="border-top:2px solid #000; padding:6px;">
+                                    <strong>
+                                        <t t-esc="net"
+                                           t-options='{"widget":"monetary","display_currency":o.company_currency_id}'/>
+                                    </strong>
+                                </td>
+                            </tr>
+
+                        </table>
+
+                        <!-- SIGNATURE -->
+                        <div class="signature">
+                            ___________________________<br/>
+                            Firma Responsable
+                        </div>
+
+                    </div>
+                </main>
+
+            </t>
+        </t>
+    </t>
+</template>
+
+
+    <!--payment_order_paperformat-->
+    <record id="paperformat_ar_payment_order" model="report.paperformat">
+        <field name="name">AR Payment Order</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+
+        <!-- REMOVE HEADER SPACE -->
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">10</field>
+        <field name="margin_right">10</field>
+
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+
+        <field name="dpi">90</field>
+    </record>
+
+
+    <record id="action_report_ar_payment_order" model="ir.actions.report">
+        <field name="name">Payment Order</field>
+        <field name="model">ar.register.payments</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_ar_payment.report_ar_payment_order</field>
+        <field name="report_file">l10n_ar_payment.report_ar_payment_order</field>
+        <field name="paperformat_id" ref="l10n_ar_payment.paperformat_ar_payment_order"/>
+        <field name="print_report_name">
+            'Payment Order - %s' % (object.payment_order_number)
+        </field>
+        <field name="binding_model_id" ref="model_ar_register_payments"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

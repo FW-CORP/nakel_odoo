@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Mueve stock físico en Nakel SA desde CEN/Existencias hacia CEN/Roturas 2
-basándose en líneas de cotizaciones NAK (sale.order en borrador).
+Mueve stock físico hacia Roturas 2 basándose en líneas de cotizaciones (sale.order en borrador).
 
-Política: mueve min(pedido, disponible) por producto en CEN/Existencias.
+Perfiles documentados en MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md:
+- CEN (default): cotizaciones NAK, stock CEN/Existencias → CEN/Roturas 2 en Nakel SA.
+- B3: cotizaciones Nakel SA (Belgrano 3), stock B3/Existencias → B3/Roturas 2.
 
-Por defecto solo se consideran cotizaciones con la etiqueta crm.tag **procesar**
-(nombre exacto, como en la ficha de venta). Tras un --apply exitoso se quita
-**procesar** y se agrega **ProcesadaNN** (nombre configurable), salvo que uses
---no-mark-processed.
+Política: mueve min(pedido, disponible) por producto en el origen del perfil.
+
+Por defecto solo cotizaciones con crm.tag **procesar**. Tras --apply se quita procesar y
+se agrega **ProcesadaNN**, incluso si no hubo stock que mover (evita reprocesar por error).
 
 Si no pasás --orden/--ordenes/--archivo-ordenes, el script lista solo cotizaciones
 NAK en borrador que tengan **procesar** y no tengan aún la etiqueta de “ya procesada”.
@@ -121,6 +122,7 @@ def _select_orders_by_tag(
     only_draft: bool,
     must_have_tag_id: int,
     skip_tag_id: int | None,
+    warehouse_id: int | None = None,
     limit: int | None = None,
 ) -> List[str]:
     dom = [("company_id", "=", int(company_nak_id))]
@@ -129,6 +131,8 @@ def _select_orders_by_tag(
     dom.append(("tag_ids", "in", [int(must_have_tag_id)]))
     if skip_tag_id is not None:
         dom.append(("tag_ids", "not in", [int(skip_tag_id)]))
+    if warehouse_id is not None:
+        dom.append(("warehouse_id", "=", int(warehouse_id)))
 
     opts = {"fields": ["name"], "order": "id asc"}
     if limit:
@@ -137,7 +141,16 @@ def _select_orders_by_tag(
     return [r["name"] for r in rows if r.get("name")]
 
 
-def _resolve_locations(models, db: int, uid: int, password: str, company_id: int) -> Tuple[int, int]:
+def _resolve_locations(
+    models,
+    db: int,
+    uid: int,
+    password: str,
+    company_id: int,
+    *,
+    src_complete_name: str,
+    dst_complete_name: str,
+) -> Tuple[int, int]:
     def _loc(complete_name: str) -> int:
         recs = models.execute_kw(
             db,
@@ -152,9 +165,7 @@ def _resolve_locations(models, db: int, uid: int, password: str, company_id: int
             raise RuntimeError(f"No se encontró ubicación {complete_name!r} para company_id={company_id}")
         return recs[0]["id"]
 
-    src = _loc("CEN/Existencias")
-    dst = _loc("CEN/Roturas 2")
-    return src, dst
+    return _loc(src_complete_name), _loc(dst_complete_name)
 
 
 def _resolve_internal_picking_type(models, db: int, uid: int, password: str, warehouse_code: str) -> int:
@@ -182,7 +193,11 @@ def _resolve_internal_picking_type(models, db: int, uid: int, password: str, war
     )
     if not pts:
         raise RuntimeError(f"No se encontró picking type internal para warehouse_id={wh_id}")
-    # Preferir el internal “genérico” del almacén (normalmente hay 1).
+    # Preferir “Traslados internos” / “Almacenamiento” si hay varios internal en el almacén.
+    for prefer in ("Traslados internos", "Almacenamiento", "Internal Transfers", "Storage"):
+        for pt in pts:
+            if (pt.get("name") or "").strip() == prefer:
+                return pt["id"]
     return pts[0]["id"]
 
 
@@ -306,6 +321,47 @@ def _finalize_pickings_same_origin(
         print(f"  picking {oid} ({st.get('name')}): validado")
 
 
+def _mark_sale_order_processed(
+    models,
+    db: int,
+    uid: int,
+    password: str,
+    *,
+    order_name: str,
+    skip_tag_id: int,
+    procesar_tag_id: int | None,
+) -> None:
+    so_id = models.execute_kw(
+        db,
+        uid,
+        password,
+        "sale.order",
+        "search",
+        [[("name", "=", order_name)]],
+        {"limit": 2},
+    )
+    if not so_id:
+        return
+    tag_cmds: List[tuple] = [(4, int(skip_tag_id))]
+    if procesar_tag_id:
+        tag_cmds.append((3, int(procesar_tag_id)))
+    models.execute_kw(
+        db,
+        uid,
+        password,
+        "sale.order",
+        "write",
+        [so_id, {"tag_ids": tag_cmds}],
+    )
+    if procesar_tag_id:
+        print(
+            f"APPLY: cotización {order_name}: tag procesada id={skip_tag_id}, "
+            f"quitado «procesar» id={procesar_tag_id}"
+        )
+    else:
+        print(f"APPLY: cotización {order_name}: solo tag procesada id={skip_tag_id} (sin quitar procesar)")
+
+
 def _needs_by_orders(
     models,
     db: int,
@@ -317,6 +373,7 @@ def _needs_by_orders(
     only_draft: bool = True,
     skip_tag_id: int | None = None,
     require_tag_id: int | None = None,
+    warehouse_id: int | None = None,
 ) -> Tuple[Dict[str, Dict[int, float]], List[str]]:
     """
     Lee líneas de venta solo de cotizaciones NAK (solo lectura de sale.order aquí).
@@ -337,7 +394,7 @@ def _needs_by_orders(
             "sale.order",
             "search_read",
             [[("name", "=", name)]],
-            {"fields": ["id", "name", "company_id", "state", "tag_ids"], "limit": 5},
+            {"fields": ["id", "name", "company_id", "state", "tag_ids", "warehouse_id"], "limit": 5},
         )
         if not sos:
             raise RuntimeError(f"No existe sale.order con name={name!r}")
@@ -350,8 +407,7 @@ def _needs_by_orders(
         if cid != company_nak_id:
             raise RuntimeError(
                 f"Orden {name!r} es de compañía {so.get('company_id')!r}. "
-                f"Solo se aceptan cotizaciones/ventas de NAK (company_id={company_nak_id}). "
-                f"No se procesan pedidos de Nakel SA ni otras compañías."
+                f"Solo se aceptan cotizaciones/ventas de company_id={company_nak_id}."
             )
         if only_draft and st != "draft":
             raise RuntimeError(
@@ -370,6 +426,18 @@ def _needs_by_orders(
             tags = so.get("tag_ids") or []
             if int(skip_tag_id) in [int(t) for t in tags]:
                 print(f"SKIP: Orden {name!r} ya está marcada como procesada (tag_id={skip_tag_id}).")
+                skipped.append(name)
+                continue
+
+        if warehouse_id is not None:
+            wh = so.get("warehouse_id")
+            wh_id = wh[0] if wh else None
+            if wh_id != int(warehouse_id):
+                wh_label = wh[1] if wh else "—"
+                print(
+                    f"SKIP: Orden {name!r} almacén={wh_label!r} (id={wh_id}); "
+                    f"se exige warehouse_id={warehouse_id}."
+                )
                 skipped.append(name)
                 continue
 
@@ -409,8 +477,24 @@ def main() -> int:
         default="",
         help="Ruta a un archivo de texto: una orden por línea (se ignoran líneas vacías y #comentarios).",
     )
-    p.add_argument("--warehouse-code", default="CEN", help="Código de almacén para resolver picking type internal (default: CEN)")
-    p.add_argument("--company-nak", type=int, default=2, help="Company_id de Nak (cotizaciones a leer; default: 2). No usar Nakel SA aquí.")
+    p.add_argument("--warehouse-code", default="CEN", help="Código de almacén (default: CEN). Define picking type y, si no pasás ubicaciones, {code}/Existencias → {code}/Roturas 2.")
+    p.add_argument(
+        "--src-location",
+        default="",
+        help="Ubicación origen (complete_name). Default: {warehouse-code}/Existencias.",
+    )
+    p.add_argument(
+        "--dst-location",
+        default="",
+        help="Ubicación destino (complete_name). Default: {warehouse-code}/Roturas 2.",
+    )
+    p.add_argument(
+        "--filtrar-warehouse-id",
+        type=int,
+        default=0,
+        help="Solo cotizaciones con este warehouse_id (ej. 17 = Belgrano 3). 0 = sin filtro.",
+    )
+    p.add_argument("--company-nak", type=int, default=2, help="Company_id de la compañía de las cotizaciones a leer (default: 2 = NAK). Para Belgrano 3 en Nakel SA usar 1.")
     p.add_argument(
         "--permitir-venta-confirmada",
         action="store_true",
@@ -604,8 +688,14 @@ def main() -> int:
         )
 
     company_id = int(args.company_nakel)
-    src_loc, dst_loc = _resolve_locations(models, db, uid, password, company_id)
-    picking_type_id = _resolve_internal_picking_type(models, db, uid, password, args.warehouse_code)
+    wh_code = (args.warehouse_code or "CEN").strip()
+    src_name = (args.src_location or "").strip() or f"{wh_code}/Existencias"
+    dst_name = (args.dst_location or "").strip() or f"{wh_code}/Roturas 2"
+    filter_wh_id = int(args.filtrar_warehouse_id or 0) or None
+    src_loc, dst_loc = _resolve_locations(
+        models, db, uid, password, company_id, src_complete_name=src_name, dst_complete_name=dst_name
+    )
+    picking_type_id = _resolve_internal_picking_type(models, db, uid, password, wh_code)
 
     only_draft = not args.permitir_venta_confirmada
 
@@ -625,6 +715,7 @@ def main() -> int:
             only_draft=only_draft,
             must_have_tag_id=int(procesar_tag_id),
             skip_tag_id=skip_tag_id,
+            warehouse_id=filter_wh_id,
             limit=lim if lim > 0 else None,
         )
         if not order_names:
@@ -651,6 +742,7 @@ def main() -> int:
         only_draft=only_draft,
         skip_tag_id=skip_tag_id,
         require_tag_id=require_tag_for_scan,
+        warehouse_id=filter_wh_id,
     )
     skipped_set = set(skipped_orders)
     order_names = [o for o in order_names if o not in skipped_set]
@@ -663,11 +755,15 @@ def main() -> int:
         print("No quedan órdenes para procesar tras filtros.")
         return 0
 
+    wh_note = f"warehouse_id={filter_wh_id}" if filter_wh_id else "warehouse_id=— (sin filtro)"
     print(
-        f"Lectura ventas: NAK company_id={args.company_nak} | solo_draft={only_draft} "
-        f"(sale.order solo lectura; no se modifica la cotización)"
+        f"Lectura ventas: company_id={args.company_nak} | solo_draft={only_draft} | {wh_note} "
+        f"(sale.order solo lectura salvo etiquetas con --apply)"
     )
-    print(f"Stock/picking: Nakel SA company_id={company_id} | src={src_loc} dst={dst_loc} | picking_type_id={picking_type_id}")
+    print(
+        f"Stock/picking: company_id={company_id} | {src_name!r} (id={src_loc}) → {dst_name!r} (id={dst_loc}) "
+        f"| almacén={wh_code!r} picking_type_id={picking_type_id}"
+    )
     print("Modo:", "DRY-RUN" if args.dry_run else "APPLY")
     proc_label = f"id={procesar_tag_id}" if procesar_tag_id else "—"
     skip_label = f"id={skip_tag_id}" if skip_tag_id else (skip_tag_name or "—")
@@ -726,7 +822,7 @@ def main() -> int:
         print("Líneas de movimiento a crear (producto con cantidad > 0 a mover):", moved_lines)
         print("Líneas de cotización con pedido<=0 (omitidas):", skipped_zero_need)
         print(
-            "Productos con pedido>0 pero stock=0 en CEN/Existencias (no se mueve nada; dado por hecho):",
+            "Productos con pedido>0 pero stock=0 en origen (no se mueve nada; dado por hecho):",
             len(sin_stock_en_origen),
         )
         if movimiento_parcial:
@@ -752,6 +848,16 @@ def main() -> int:
 
         if not moves:
             print("APPLY: nada para crear (sin líneas).")
+            if mark_processed and skip_tag_id:
+                _mark_sale_order_processed(
+                    models,
+                    db,
+                    uid,
+                    password,
+                    order_name=oname,
+                    skip_tag_id=int(skip_tag_id),
+                    procesar_tag_id=procesar_tag_id,
+                )
             continue
 
         origin_str = f"{oname} -> Roturas2 (mover disponible)"
@@ -795,35 +901,15 @@ def main() -> int:
         print("APPLY: picking principal validado:", pid_pick)
 
         if mark_processed and skip_tag_id:
-            tag_id_to_set = int(skip_tag_id)
-            so_id = models.execute_kw(
+            _mark_sale_order_processed(
+                models,
                 db,
                 uid,
                 password,
-                "sale.order",
-                "search",
-                [[("name", "=", oname)]],
-                {"limit": 2},
+                order_name=oname,
+                skip_tag_id=int(skip_tag_id),
+                procesar_tag_id=procesar_tag_id,
             )
-            if so_id:
-                tag_cmds: List[tuple] = [(4, int(tag_id_to_set))]
-                if procesar_tag_id:
-                    tag_cmds.append((3, int(procesar_tag_id)))
-                models.execute_kw(
-                    db,
-                    uid,
-                    password,
-                    "sale.order",
-                    "write",
-                    [so_id, {"tag_ids": tag_cmds}],
-                )
-                if procesar_tag_id:
-                    print(
-                        f"APPLY: cotización {oname}: tag procesada id={tag_id_to_set}, "
-                        f"quitado «procesar» id={procesar_tag_id}"
-                    )
-                else:
-                    print(f"APPLY: cotización {oname}: solo tag procesada id={tag_id_to_set} (sin quitar procesar)")
 
     return 0
 

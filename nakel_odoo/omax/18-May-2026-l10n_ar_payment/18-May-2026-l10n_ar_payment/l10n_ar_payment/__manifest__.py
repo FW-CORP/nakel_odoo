@@ -2,7 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 {
     'name' : 'Mass Payment Registration flow including Withholding and Payment Order Histroy - Argentina',
-    'version': '18.0.1.0',
+    'version': '18.0.1.1',
     'category': 'Accounting,Sales,Purchases',
     'sequence': 1,
     'author': 'OMAX Informatics',
@@ -12,6 +12,7 @@
     'depends' : ['account', 'l10n_ar','l10n_latam_check', 'l10n_ar_withholding',],
     'data': [
         'security/ir.model.access.csv',
+        'report/report_payment_order.xml',
         'data/ir_sequence.xml',
         'data/ir_cron.xml',
         'views/ar_register_payments.xml',

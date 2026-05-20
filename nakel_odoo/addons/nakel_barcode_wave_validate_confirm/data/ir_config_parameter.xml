@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="icp_nakel_barcode_wave_validate_confirm_enable" model="ir.config_parameter">
+            <field name="key">nakel_barcode_wave_validate_confirm.enable</field>
+            <field name="value">1</field>
+        </record>
+        <record id="icp_nakel_barcode_wave_validate_confirm_message" model="ir.config_parameter">
+            <field name="key">nakel_barcode_wave_validate_confirm.message</field>
+            <field name="value">¿Realmente querés validar la OLA?</field>
+        </record>
+    </data>
+</odoo>

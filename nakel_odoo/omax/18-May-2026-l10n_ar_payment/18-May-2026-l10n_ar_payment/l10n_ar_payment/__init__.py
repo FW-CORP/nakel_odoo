@@ -3,6 +3,7 @@
 
 from . import wizard
 from . import models
+from . import report
 
 def pre_init_check(cr):
     from odoo.service import common

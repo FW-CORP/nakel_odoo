@@ -9,6 +9,11 @@
                 <header>
                     <div style="margin-left: 1300px;">
                         <button string="Create Payment" name="create_payment" type="object" class="btn btn-primary" invisible="is_executed"/>
+                        <!--button name="%(action_report_ar_payment_order)d"
+                            string="Print Payment Order"
+                            type="action"
+                            class="btn-primary"
+                            invisible="not is_executed"/-->
                     </div>
                 </header>
                 <sheet>
@@ -24,7 +29,8 @@
                     </div>
                     <group>
                         <group>
-                            <field name="partner_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="partner_id" string="Customer" invisible="partner_type != 'customer'" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="partner_id" string="Vendor" invisible="partner_type != 'supplier'" options="{'no_create': True, 'no_open': True}"/>
                             <field name="move_ids" widget="many2many_tags" options="{'no_create': True, 'no_open': True}" invisible="0" readonly="0"/>
                             <field name="created_account_payment_ids" widget="many2many_tags" options="{'no_create': True, 'no_open': True}" invisible="1"/>
                         </group>
@@ -61,7 +67,7 @@
                                         <field name="payment_method_code" invisible="1" optional="hide"/>
                                         <field name="amount_total" force_save="1" optional="show" /><!--sum="amount_total"-->
                                         <field name="amount_due" force_save="1" optional="show" /><!--sum="amount_due"-->
-                                        <field name="amount" optional="show" sum="amount"/>
+                                        <field name="amount" context="{'from_ar_payment_line_list_view': True}" optional="show" sum="amount"/>
                                         <field name="currency_id" optional="hide"/>
                                         <field name="l10n_ar_withholding_amount_total" optional="show" sum="l10n_ar_withholding_amount_total"/><!--force_save="1" not working-->
                                         <field name="l10n_ar_net_amount" optional="show" sum="l10n_ar_net_amount"/>
@@ -96,7 +102,10 @@
                 <field name="create_date" optional="hide"/>
                 <field name="payment_order_number"/>
                 <!--field name="name"/-->
-                <field name="partner_id"/>
+                <field name="partner_id" string="Customer" column_invisible="context.get('default_partner_type') != 'customer'"/>
+                <field name="partner_id" string="Vendor" column_invisible="context.get('default_partner_type') != 'supplier'"/>
+                <!-- <field name="partner_id" string="Customer" invisible="partner_type != 'customer'"/>
+                <field name="partner_id" string="Vendor" invisible="partner_type != 'supplier'"/> -->
                 <field name="payment_date"/>
                 <field name="partner_type"/>
                 <field name="payment_type"/>
@@ -114,7 +123,18 @@
             <search string="Search AR Register Payments">
                 <!-- 🔍 Quick Search -->
                 <field name="payment_order_number" string="Payment Order"/>
-                <field name="partner_id"/>
+                <field name="partner_id" string="Customer" invisible="context.get('default_partner_type') != 'customer'"/>
+                <field name="partner_id" string="Vendor" invisible="context.get('default_partner_type') != 'supplier'"/>
+
+                <filter name="filter_customer_partner"
+                        string="Customers"
+                        domain="[('partner_type', '=', 'customer')]"
+                        invisible="context.get('default_partner_type') != 'customer'"/>
+
+                <filter name="filter_vendor_partner"
+                        string="Vendors"
+                        domain="[('partner_type', '=', 'supplier')]"
+                        invisible="context.get('default_partner_type') != 'supplier'"/>
                 <field name="payment_date"/>
 
                 <!-- 🔎 Filters -->
@@ -154,6 +174,8 @@
         <field name="res_model">ar.register.payments</field>
         <field name="view_mode">list,form</field>
         <field name="domain">[('partner_type','=','customer'),('is_executed','=',True)]</field>
+        <field name="context">{'default_partner_type': 'customer', 'partner_label': 'Customer'}</field>
+
     </record>
     <menuitem id="menu_ar_register_payments_customer"
           name="Customer Payments"
@@ -166,6 +188,7 @@
         <field name="res_model">ar.register.payments</field>
         <field name="view_mode">list,form</field>
         <field name="domain">[('partner_type','=','supplier'),('is_executed','=',True)]</field>
+        <field name="context">{'default_partner_type': 'supplier', 'partner_label': 'Vendor'}</field>
     </record>
     <menuitem id="menu_ar_register_payments_vendor"
           name="Vendor Payments"
