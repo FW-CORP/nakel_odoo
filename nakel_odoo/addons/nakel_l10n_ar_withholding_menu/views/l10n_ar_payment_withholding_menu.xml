@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_l10n_ar_payment_withholding_nakel_list" model="ir.ui.view">
+        <field name="name">l10n_ar.payment.withholding.nakel.list</field>
+        <field name="model">l10n_ar.payment.withholding</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false" default_order="create_date desc">
+                <field name="payment_id"/>
+                <field name="partner_type"/>
+                <field name="tax_id"/>
+                <field name="name" string="Numero"/>
+                <field name="base_amount"/>
+                <field name="amount"/>
+                <field name="company_id" optional="hide"/>
+                <field name="create_date" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_l10n_ar_payment_withholding_nakel_search" model="ir.ui.view">
+        <field name="name">l10n_ar.payment.withholding.nakel.search</field>
+        <field name="model">l10n_ar.payment.withholding</field>
+        <field name="arch" type="xml">
+            <search string="Buscar retenciones">
+                <field name="payment_id"/>
+                <field name="tax_id"/>
+                <field name="name"/>
+                <filter name="supplier" string="Proveedores" domain="[('partner_type', '=', 'supplier')]"/>
+                <filter name="customer" string="Clientes" domain="[('partner_type', '=', 'customer')]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_payment" string="Pago" context="{'group_by': 'payment_id'}"/>
+                    <filter name="group_by_tax" string="Impuesto" context="{'group_by': 'tax_id'}"/>
+                    <filter name="group_by_type" string="Tipo" context="{'group_by': 'partner_type'}"/>
+                    <filter name="group_by_month" string="Mes" context="{'group_by': 'create_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_l10n_ar_payment_withholding_supplier" model="ir.actions.act_window">
+        <field name="name">Retenciones de proveedores</field>
+        <field name="res_model">l10n_ar.payment.withholding</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_l10n_ar_payment_withholding_nakel_list"/>
+        <field name="search_view_id" ref="view_l10n_ar_payment_withholding_nakel_search"/>
+        <field name="domain">[('partner_type', '=', 'supplier')]</field>
+        <field name="context">{'search_default_group_by_payment': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay retenciones de proveedores para mostrar.
+            </p>
+            <p>
+                Las retenciones se generan desde los pagos y desde este listado se pueden consultar e imprimir certificados.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_l10n_ar_payment_withholding_customer" model="ir.actions.act_window">
+        <field name="name">Retenciones de clientes</field>
+        <field name="res_model">l10n_ar.payment.withholding</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_l10n_ar_payment_withholding_nakel_list"/>
+        <field name="search_view_id" ref="view_l10n_ar_payment_withholding_nakel_search"/>
+        <field name="domain">[('partner_type', '=', 'customer')]</field>
+        <field name="context">{'search_default_group_by_payment': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay retenciones de clientes para mostrar.
+            </p>
+            <p>
+                Las retenciones se generan desde los cobros y desde este listado se pueden consultar e imprimir certificados.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_l10n_ar_payment_withholding_all" model="ir.actions.act_window">
+        <field name="name">Todas las retenciones</field>
+        <field name="res_model">l10n_ar.payment.withholding</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_l10n_ar_payment_withholding_nakel_list"/>
+        <field name="search_view_id" ref="view_l10n_ar_payment_withholding_nakel_search"/>
+        <field name="context">{'search_default_group_by_payment': 1}</field>
+    </record>
+
+    <menuitem
+        id="menu_l10n_ar_payment_withholding_supplier"
+        name="Retenciones"
+        parent="account.menu_finance_payables"
+        action="action_l10n_ar_payment_withholding_supplier"
+        sequence="85"
+        groups="account.group_account_readonly"/>
+
+    <menuitem
+        id="menu_l10n_ar_payment_withholding_customer"
+        name="Retenciones"
+        parent="account.menu_finance_receivables"
+        action="action_l10n_ar_payment_withholding_customer"
+        sequence="85"
+        groups="account.group_account_readonly"/>
+
+    <menuitem
+        id="menu_l10n_ar_payment_withholding_all"
+        name="Todas las retenciones"
+        parent="account.menu_finance_entries"
+        action="action_l10n_ar_payment_withholding_all"
+        sequence="85"
+        groups="account.group_account_readonly"/>
+</odoo>
+

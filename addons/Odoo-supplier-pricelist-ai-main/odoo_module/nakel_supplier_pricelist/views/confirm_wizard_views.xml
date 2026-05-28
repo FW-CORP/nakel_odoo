@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_supplier_pricelist_confirm_wizard_form" model="ir.ui.view">
+        <field name="name">supplier.pricelist.confirm.wizard.form</field>
+        <field name="model">supplier.pricelist.confirm.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmar match de producto">
+                <sheet>
+
+                    <!-- ── Comparativa ───────────────────────────────────── -->
+                    <group string="Producto del proveedor">
+                        <group>
+                            <field name="supplier_product_name"/>
+                            <field name="supplier_presentation"
+                                   invisible="not supplier_presentation"/>
+                        </group>
+                        <group>
+                            <field name="price_with_vat" widget="monetary"/>
+                            <field name="price_without_vat" widget="monetary"/>
+                        </group>
+                    </group>
+
+                    <group string="Comparativa de costo">
+                        <group>
+                            <field name="current_cost" widget="monetary"/>
+                            <field name="cost_delta_display" string="Δ%"/>
+                            <field name="has_comparable_cost" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="match_status" widget="badge"
+                                   decoration-warning="match_status == 'review'"
+                                   decoration-danger="match_status == 'no_match'"/>
+                        </group>
+                    </group>
+
+                    <!-- ── Alternativas ──────────────────────────────────── -->
+                    <group string="Alternativas sugeridas por el agente"
+                           invisible="not alternative_ids">
+                        <field name="alternative_ids" nolabel="1"
+                               widget="many2many_tags"/>
+                    </group>
+
+                    <separator/>
+
+                    <!-- ── Selección del producto ────────────────────────── -->
+                    <group string="Confirmación">
+                        <field name="product_tmpl_id"
+                               options="{'no_create': True}"
+                               placeholder="Buscá el producto en Odoo..."/>
+                        <field name="match_notes"
+                               placeholder="Observación opcional..."/>
+                    </group>
+
+                </sheet>
+
+                <footer>
+                    <button name="action_confirm"
+                            string="Confirmar match"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_confirm_and_apply"
+                            string="Confirmar y aplicar costo"
+                            type="object"
+                            class="btn-secondary"/>
+                    <button string="Cancelar"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

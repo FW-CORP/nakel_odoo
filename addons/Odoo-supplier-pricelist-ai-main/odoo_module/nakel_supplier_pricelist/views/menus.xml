@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_supplier_pricelist_root"
+              name="Listas de Precios"
+              parent="purchase.menu_purchase_root"
+              sequence="25"/>
+
+    <menuitem id="menu_supplier_pricelist_import"
+              name="Importar Lista de Proveedor"
+              parent="menu_supplier_pricelist_root"
+              action="action_supplier_pricelist_import"
+              sequence="10"/>
+
+    <menuitem id="menu_supplier_product_mapping"
+              name="Memoria de Matches"
+              parent="menu_supplier_pricelist_root"
+              action="action_supplier_product_mapping"
+              sequence="20"
+              groups="purchase.group_purchase_manager"/>
+</odoo>

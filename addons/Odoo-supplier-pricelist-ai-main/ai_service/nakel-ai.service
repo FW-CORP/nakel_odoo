@@ -1,0 +1,20 @@
+[Unit]
+Description=Nakel AI Supplier Pricelist Service
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=aiadmin
+WorkingDirectory=/home/aiadmin/nakel_ai_service
+Environment="PATH=/home/aiadmin/nakel_ai_service/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+EnvironmentFile=/home/aiadmin/nakel_ai_service/.env
+ExecStart=/home/aiadmin/nakel_ai_service/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8001 --log-level info
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nakel-ai
+
+[Install]
+WantedBy=multi-user.target

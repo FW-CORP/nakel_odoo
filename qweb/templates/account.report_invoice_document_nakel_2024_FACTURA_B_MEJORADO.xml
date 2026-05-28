@@ -6,8 +6,20 @@
       <t t-call="web.basic_layout">
     <!-- Numeración: Odoo envía header/footer a wkhtml como HTML aparte; subst() rellena span.page y span.topage.
          En div.header el texto quedaba superpuesto al contenido; en div.footer va al pie real del PDF. -->
-    <div class="footer o_nakel_page_footer" style="font-size:8px; text-align:right; color:#000; padding:2px 2mm 0 2mm; line-height:1.2;">
-      Hoja <span class="page"></span>/<span class="topage"></span>
+    <div class="footer o_nakel_page_footer" style="font-size:8px; color:#000; padding:2px 4mm 0 4mm; line-height:1.25;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:6mm;">
+        <div style="text-align:left; max-width:72%; font-size:7px; line-height:1.2;">
+          <t t-if="o._fields.get('l10n_ar_afip_auth_code') and o.l10n_ar_afip_auth_code">
+            <span>CAE: <span t-field="o.l10n_ar_afip_auth_code"/></span>
+            <t t-if="o._fields.get('l10n_ar_afip_auth_code_due') and o.l10n_ar_afip_auth_code_due">
+              <span style="padding-left:4px;">Vto. CAE: <span t-field="o.l10n_ar_afip_auth_code_due" t-options="{'widget': 'date'}"/></span>
+            </t>
+          </t>
+        </div>
+        <div style="text-align:right; white-space:nowrap;">
+          Hoja <span class="page"></span>/<span class="topage"></span>
+        </div>
+      </div>
     </div>
     <!-- Refuerzo A4 vertical (wkhtmltopdf): evita PDF apaisado si el paperformat quedó en Landscape -->
     <style type="text/css">
@@ -18,28 +30,90 @@
         padding-top: 0 !important;
         margin-top: 0 !important;
       }
+      /* Un solo flujo por factura: NO usar class "page" ni varios div.page (wkhtml dejaba hojas casi vacías). */
       .nakel-invoice-page {
         padding-top: 0;
-        padding-bottom: 8mm; /* margen inferior lo reserva report.paperformat + @page */
+        padding-bottom: 2mm;
         box-sizing: border-box;
+        page-break-after: always;
+        break-after: page;
       }
-      /* Letra fiscal alineada verticalmente con las columnas laterales */
-      .nakel-fiscal-header.row {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
+      .nakel-cont-header {
+        font-size: 10px;
+        color: #555;
+        margin: 0 0 6px 0;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #ccc;
       }
-      .nakel-fiscal-header .nakel-doc-letter {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        align-self: stretch;
+      /* Encabezado 3 columnas (table: wkhtmltopdf alinea mejor que flex + rows vacías) */
+      .nakel-header-grid {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-bottom: 6px;
       }
-      /* Letra fiscal (A/B/C): más grande que el cuerpo 14px, sin forzar altura extra de fila */
-      .nakel-fiscal-header .nakel-doc-letter-inner {
-        font-size: 24px;
+      .nakel-header-grid > .nakel-hcell {
+        display: table-cell;
+        vertical-align: top;
+        padding: 0 4px;
+      }
+      .nakel-hcell-left { width: 40%; }
+      .nakel-hcell-center { width: 18%; text-align: center; vertical-align: top; }
+      .nakel-hcell-right { width: 42%; }
+      .nakel-hcell-right .nakel-right-stack {
+        width: 100%;
+        margin-left: 0;
+        padding-right: 0;
+        text-align: right;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .nakel-hcell-right .nakel-right-block {
+        margin-bottom: 6px;
+      }
+      .nakel-hcell-right .nakel-right-block:last-child {
+        margin-bottom: 0;
+      }
+      .nakel-doc-letter-box {
+        display: inline-block;
+        border: 2px solid #111;
+        min-width: 14mm;
+        min-height: 14mm;
+        line-height: 14mm;
+        text-align: center;
+        font-size: 28px;
         font-weight: 700;
-        line-height: 1;
+        margin: 8px auto 0;
+      }
+      /* Fila 2: dirección fiscal (izq) y envío (der) a la misma altura */
+      .nakel-addr-grid {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+        margin-top: 4px;
+      }
+      .nakel-addr-grid > .nakel-addr-cell {
+        display: table-cell;
+        vertical-align: top;
+        padding-top: 6px;
+        border-top: 1px solid #ddd;
+        font-size: 11px;
+        line-height: 1.35;
+      }
+      .nakel-addr-left { width: 58%; padding-right: 6px; }
+      .nakel-addr-spacer { width: 18%; border-top: 1px solid #ddd; }
+      .nakel-addr-right { width: 42%; }
+      .nakel-addr-right-inner {
+        width: 100%;
+        margin-left: 0;
+        padding-right: 0;
+        text-align: right;
+      }
+      .nakel-block-title {
+        font-weight: 700;
+        font-size: 11px;
+        margin-bottom: 2px;
       }
       /* Tabla de ítems: repetir encabezado y evitar cortar filas por la mitad */
       table.nakel-lines-table {
@@ -51,9 +125,14 @@
       table.nakel-lines-table thead {
         display: table-header-group;
       }
-      table.nakel-lines-table tbody tr {
+      table.nakel-lines-table tbody tr.nakel-line-section,
+      table.nakel-lines-table tbody tr.nakel-line-note {
         page-break-inside: avoid;
         break-inside: avoid;
+      }
+      table.nakel-lines-table tbody tr.nakel-line-product {
+        page-break-inside: auto;
+        break-inside: auto;
       }
       /* Columnas destacadas ~14px (vs 10px base de la tabla) */
       table.nakel-lines-table th.nakel-col-code,
@@ -72,6 +151,10 @@
         font-size: 14px;
         font-weight: 600;
         line-height: 1.3;
+      }
+      table.nakel-lines-table th.nakel-col-qty {
+        white-space: nowrap;
+        font-size: 12px;
       }
       table.nakel-lines-table th.nakel-col-price,
       table.nakel-lines-table td.nakel-col-price {
@@ -96,10 +179,44 @@
         font-weight: 700;
         line-height: 1.3;
       }
-      /* QR + totales: no partir el bloque entre páginas */
+      /* Tabla de productos: llenar cada hoja; no reservar espacio para el cierre */
+      table.nakel-lines-table tbody tr.nakel-line-product td {
+        padding-top: 4px;
+        padding-bottom: 4px;
+      }
+      /* QR + totales: al final del flujo; intentar mantener juntos sin forzar hoja en blanco */
       .nakel-totals-qr-block {
         page-break-inside: avoid;
+        break-inside: avoid-page;
+        page-break-before: auto;
+      }
+      .nakel-totals-table-wrap table tr {
+        page-break-inside: avoid;
         break-inside: avoid;
+      }
+      /* Solo totales (chico): intentar no partir subtotal/IVA/total */
+      .nakel-totales-mini {
+        page-break-inside: avoid;
+        break-inside: avoid-page;
+      }
+      /* Pie AFIP pegado a totales, sin forzar salto de productos */
+      .nakel-pie-fiscal {
+        page-break-before: avoid;
+        break-before: avoid-page;
+        page-break-inside: avoid;
+        border-top: 1px solid #d0d0d0;
+        padding-top: 3px;
+        margin-top: 4px;
+        text-align: center;
+        font-size: 8px;
+        line-height: 1.2;
+        color: #3f3f3f;
+      }
+      .nakel-pie-fiscal-titulo {
+        font-weight: 700;
+        font-size: 9px;
+        color: #202020;
+        margin-bottom: 2px;
       }
     </style>
       <t t-set="report_date" t-value="o.invoice_date"/>
@@ -118,88 +235,85 @@
       <t t-set="company_email" t-value="o.company_id.email or 'info@nakel.net.ar'"/>
       <t t-set="company_phone" t-value="o.company_id.phone or '297 5415807'"/>
       <t t-set="formatted_vat" t-value="o.company_id.partner_id.l10n_ar_formatted_vat if o.company_id.partner_id and o.company_id.partner_id._fields.get('l10n_ar_formatted_vat') else o.company_id.vat"/>
-      <div class="page nakel-invoice-page" style="font-size:12px; color:#202020; padding:0 2mm 0 2mm; position:relative;">
-        <div class="row nakel-fiscal-header" style="border-bottom:1px solid #111; padding-bottom:6px; margin-bottom:8px;">
-          <div class="col-4" style="font-size:10px; line-height:1.3;">
-            <t t-if="o.company_id.logo">
-              <div style="margin-bottom:4px;">
-                <img t-att-src="image_data_uri(o.company_id.logo)" style="max-height:38px;" alt="Logo"/>
+      <div class="nakel-invoice-page" style="font-size:12px; color:#202020; padding:0 2mm 0 2mm; position:relative;">
+        <div style="border-bottom:1px solid #111; padding-bottom:8px; margin-bottom:8px;">
+          <div class="nakel-header-grid">
+            <!-- 1 — Datos Nakel + cliente -->
+            <div class="nakel-hcell nakel-hcell-left">
+              <t t-if="o.company_id.logo">
+                <div style="margin-bottom:4px;">
+                  <img t-att-src="image_data_uri(o.company_id.logo)" style="max-height:38px;" alt="Logo"/>
+                </div>
+              </t>
+              <div style="font-size:13px; font-weight:700; margin-bottom:2px;"><span t-field="o.company_id.name"/></div>
+              <div style="font-size:10px; line-height:1.3; margin-bottom:8px;">
+                <div><span t-field="o.company_id.street"/> - <span t-field="o.company_id.city"/></div>
+                <div><span t-field="o.company_id.state_id.name"/> - <span t-field="o.company_id.zip"/></div>
               </div>
-            </t>
-            <div style="font-size:13px;"><strong t-field="o.company_id.name"/></div>
-            <div><span t-field="o.company_id.street"/> - <span t-field="o.company_id.city"/></div>
-            <div><span t-field="o.company_id.state_id.name"/> - <span t-field="o.company_id.zip"/></div>
-          </div>
-          <div class="col-2 text-center nakel-doc-letter">
-            <div class="nakel-doc-letter-inner">
-              <t t-out="document_letter"/>
+              <div style="font-size:12px; line-height:1.4;">
+                <t t-if="o.partner_id.name"><div><strong>Nombre:</strong> <span t-field="o.partner_id.name"/></div></t>
+                <t t-if="o.partner_id.vat"><div><strong>CUIT/DNI:</strong> <span t-field="o.partner_id.vat"/></div></t>
+                <t t-if="o.partner_id.phone"><div><strong>Teléfono:</strong> <span t-field="o.partner_id.phone"/></div></t>
+                <t t-if="o.partner_id.email"><div><strong>e-mail:</strong> <span t-field="o.partner_id.email"/></div></t>
+              </div>
             </div>
-          </div>
-          <div class="col-6" style="font-size:14px; line-height:1.3;">
-            <div style="width:74mm; margin-left:auto; text-align:left;">
-              <div>Nro: <span t-field="o.name"/></div>
-              <div>Fecha: <span t-field="o.invoice_date" t-options="{'widget': 'date'}"/></div>
-              <div>CUIT: <span t-esc="formatted_vat"/></div>
-              <div>IVA Responsable Inscripto</div>
-              <t t-if="o.company_id.l10n_ar_gross_income_number">
-                <div>IIBB: <span t-field="o.company_id.l10n_ar_gross_income_number"/></div>
-              </t>
-              <t t-if="o.company_id.l10n_ar_afip_start_date">
-                <div>Inicio de actividades: <span t-field="o.company_id.l10n_ar_afip_start_date" t-options="{'widget': 'date'}"/></div>
-              </t>
+            <!-- 4 — Letra del comprobante -->
+            <div class="nakel-hcell nakel-hcell-center">
+              <div class="nakel-doc-letter-box">
+                <t t-out="document_letter"/>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Dirección fiscal del receptor (facturación) -->
-        <div class="row" style="margin-bottom:4px; font-size:12px; line-height:1.35;">
-          <div class="col-4"/>
-          <div class="col-2"/>
-          <div class="col-6">
-            <div style="width:74mm; margin-left:auto; text-align:left;">
-              <t t-if="partner_fiscal and (partner_fiscal.street or partner_fiscal.street2 or partner_fiscal.city or partner_fiscal.state_id or partner_fiscal.zip)">
-                <div style="font-weight:700; margin-bottom:2px;">Dirección fiscal</div>
-                <div>
-                  <span t-if="partner_fiscal.street" t-field="partner_fiscal.street"/>
-                  <t t-if="partner_fiscal.street2"> - <span t-field="partner_fiscal.street2"/></t>
+            <!-- Comprobante + dirección de envío (columna derecha) -->
+            <div class="nakel-hcell nakel-hcell-right">
+              <div class="nakel-right-stack">
+                <div class="nakel-right-block" style="font-size:13px; line-height:1.35;">
+                  <div><strong>Nro:</strong> <span t-field="o.name"/></div>
+                  <div><strong>Fecha:</strong> <span t-field="o.invoice_date" t-options="{'widget': 'date'}"/></div>
+                  <div><strong>CUIT:</strong> <span t-esc="formatted_vat"/></div>
+                  <div>IVA Responsable Inscripto</div>
+                  <t t-if="o.company_id.l10n_ar_gross_income_number">
+                    <div><strong>IIBB:</strong> <span t-field="o.company_id.l10n_ar_gross_income_number"/></div>
+                  </t>
+                  <t t-if="o.company_id.l10n_ar_afip_start_date">
+                    <div><strong>Inicio de actividades:</strong> <span t-field="o.company_id.l10n_ar_afip_start_date" t-options="{'widget': 'date'}"/></div>
+                  </t>
                 </div>
-                <t t-if="partner_fiscal.city"><div>Localidad: <span t-field="partner_fiscal.city"/></div></t>
-                <t t-if="partner_fiscal.state_id"><div>Provincia: <span t-field="partner_fiscal.state_id.name"/></div></t>
-                <t t-if="partner_fiscal.zip"><div>C.P.: <span t-field="partner_fiscal.zip"/></div></t>
-              </t>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div class="row" style="margin-bottom:8px;">
-          <div class="col-4"/>
-          <div class="col-2" style="text-align:center; font-size:14px; font-weight:700; line-height:1.3;">
-            <span t-out="receptor_condicion_leyenda"/>
-          </div>
-          <div class="col-6"/>
-        </div>
-
-        <div class="row" style="margin-bottom:8px; font-size:12px; line-height:1.45;">
-          <div class="col-4">
-            <t t-if="o.partner_id.name"><div>Nombre: <span t-field="o.partner_id.name"/></div></t>
-            <t t-if="o.partner_id.vat"><div>CUIT/DNI: <span t-field="o.partner_id.vat"/></div></t>
-            <t t-if="o.partner_id.phone"><div>Teléfono: <span t-field="o.partner_id.phone"/></div></t>
-            <t t-if="o.partner_id.email"><div>e-mail: <span t-field="o.partner_id.email"/></div></t>
-          </div>
-          <div class="col-8">
-            <div style="width:74mm; margin-left:auto; text-align:left;">
-              <t t-if="envio_distinto_de_fiscal">
-                <div style="font-weight:700; margin-bottom:2px;">Dirección de envío</div>
-                <div>
-                  <span t-if="partner_entrega.street" t-field="partner_entrega.street"/>
-                  <t t-if="partner_entrega.street2"> - <span t-field="partner_entrega.street2"/></t>
-                </div>
-                <t t-if="partner_entrega.city"><div>Localidad: <span t-field="partner_entrega.city"/></div></t>
-                <t t-if="partner_entrega.state_id"><div>Provincia: <span t-field="partner_entrega.state_id.name"/></div></t>
-                <t t-if="partner_entrega.zip"><div>C.P.: <span t-field="partner_entrega.zip"/></div></t>
-              </t>
+          <!-- Fila direcciones: fiscal (izq) y envío (der) alineadas + línea separadora en ambos lados -->
+          <t t-set="tiene_dir_fiscal" t-value="partner_fiscal and (partner_fiscal.street or partner_fiscal.street2 or partner_fiscal.city or partner_fiscal.state_id or partner_fiscal.zip)"/>
+          <t t-if="tiene_dir_fiscal or envio_distinto_de_fiscal">
+            <div class="nakel-addr-grid">
+              <div class="nakel-addr-cell nakel-addr-left">
+                <t t-if="tiene_dir_fiscal">
+                  <div class="nakel-block-title">Dirección fiscal</div>
+                  <div>
+                    <span t-if="partner_fiscal.street" t-field="partner_fiscal.street"/>
+                    <t t-if="partner_fiscal.street2"> - <span t-field="partner_fiscal.street2"/></t>
+                  </div>
+                  <t t-if="partner_fiscal.city"><div>Localidad: <span t-field="partner_fiscal.city"/></div></t>
+                  <t t-if="partner_fiscal.state_id"><div>Provincia: <span t-field="partner_fiscal.state_id.name"/></div></t>
+                  <t t-if="partner_fiscal.zip"><div>C.P.: <span t-field="partner_fiscal.zip"/></div></t>
+                </t>
+              </div>
+              <div class="nakel-addr-cell nakel-addr-spacer"/>
+              <div class="nakel-addr-cell nakel-addr-right">
+                <t t-if="envio_distinto_de_fiscal">
+                  <div class="nakel-addr-right-inner">
+                    <div class="nakel-block-title">Dirección de envío</div>
+                    <div>
+                      <span t-if="partner_entrega.street" t-field="partner_entrega.street"/>
+                      <t t-if="partner_entrega.street2"> - <span t-field="partner_entrega.street2"/></t>
+                    </div>
+                    <t t-if="partner_entrega.city"><div>Localidad: <span t-field="partner_entrega.city"/></div></t>
+                    <t t-if="partner_entrega.state_id"><div>Provincia: <span t-field="partner_entrega.state_id.name"/></div></t>
+                    <t t-if="partner_entrega.zip"><div>C.P.: <span t-field="partner_entrega.zip"/></div></t>
+                  </div>
+                </t>
+              </div>
             </div>
-          </div>
+          </t>
         </div>
 
         <div style="font-size:13px; font-weight:700; margin:10px 0 6px;">DETALLE DE PRODUCTOS</div>
@@ -217,32 +331,32 @@
           <tbody>
             <t t-foreach="o.invoice_line_ids" t-as="l">
               <!-- Línea de producto -->
-              <tr t-if="not l.display_type or l.display_type == 'product'">
+              <tr t-if="not l.display_type or l.display_type == 'product'" class="nakel-line-product">
                 <td class="nakel-col-code" style="border:1px solid #111; padding:5px 3px; vertical-align:top; word-wrap:break-word;"><span t-field="l.product_id.default_code"/></td>
                 <td class="nakel-col-desc" style="border:1px solid #111; padding:5px 4px; vertical-align:top; word-wrap:break-word;"><span t-field="l.product_id.name"/></td>
-                <td class="nakel-col-qty" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:center;"><span t-esc="'%.2f' % (l.quantity or 0)"/></td>
-                <td class="nakel-col-price" style="border:1px solid #111; padding:5px 2px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-esc="'%.2f' % (l.price_unit or 0)"/></td>
+                <td class="nakel-col-qty" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:center;"><span t-field="l.quantity"/></td>
+                <td class="nakel-col-price" style="border:1px solid #111; padding:5px 2px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-field="l.price_unit" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                 <td class="nakel-col-tax-body" style="border:1px solid #111; padding:5px 4px; vertical-align:top; text-align:right; word-wrap:break-word;">
                   <t t-if="l.tax_ids">
                     <t t-set="nakel_is_refund" t-value="o.move_type in ('out_refund', 'in_refund')"/>
                     <t t-set="nakel_line_currency" t-value="l.currency_id if l.currency_id else o.currency_id"/>
                     <t t-set="tax_comp" t-value="l.tax_ids.compute_all(l.price_unit, nakel_line_currency, l.quantity, product=l.product_id, partner=o.partner_id, is_refund=nakel_is_refund)"/>
                     <t t-foreach="tax_comp.get('taxes') or []" t-as="tax_row">
-                      <div><span t-esc="(tax_row.get('name') or '').strip()"/> = <span t-esc="'%.2f' % (tax_row.get('amount') or 0)"/></div>
+                      <div><span t-esc="(tax_row.get('name') or '').strip()"/> = <span t-out="tax_row.get('amount') or 0.0" t-options='{"widget": "monetary", "display_currency": nakel_line_currency}'/></div>
                     </t>
                   </t>
                   <t t-else="">—</t>
                 </td>
-                <td class="nakel-col-sub" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-esc="'%.2f' % (l.price_subtotal or 0)"/></td>
+                <td class="nakel-col-sub" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-field="l.price_subtotal" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
               </tr>
               <!-- Sección -->
-              <tr t-elif="l.display_type == 'line_section'">
+              <tr t-elif="l.display_type == 'line_section'" class="nakel-line-section">
                 <td colspan="6" style="border:1px solid #111; padding:6px; font-weight:700; background:#f5f5f5;">
                   <span t-field="l.name" t-options="{'widget': 'text'}"/>
                 </td>
               </tr>
               <!-- Nota -->
-              <tr t-elif="l.display_type == 'line_note'">
+              <tr t-elif="l.display_type == 'line_note'" class="nakel-line-note">
                 <td colspan="6" style="border:1px solid #111; padding:6px; font-style:italic; background:#fafafa;">
                   <span t-field="l.name" t-options="{'widget': 'text'}"/>
                 </td>
@@ -251,27 +365,27 @@
           </tbody>
         </table>
 
-        <div class="row nakel-totals-qr-block" style="margin-top:6px; margin-bottom:10px;">
+        <div class="row nakel-totals-qr-block" style="margin-top:4px; margin-bottom:2px;">
           <div class="col-5">
-            <div style="border:1px solid #ddd; width:190px; min-height:74px; padding:6px; text-align:center;">
+            <div style="border:1px solid #ddd; width:155px; padding:4px; text-align:center;">
               <t t-if="o._fields.get('l10n_ar_afip_qr_code') and o.l10n_ar_afip_qr_code">
-                <img t-att-src="'/report/barcode/?barcode_type=QR&amp;value=' + quote_plus(o.l10n_ar_afip_qr_code) + '&amp;width=90&amp;height=90'" style="width:76px; height:76px;" alt="QR AFIP"/>
+                <img t-att-src="'/report/barcode/?barcode_type=QR&amp;value=' + quote_plus(o.l10n_ar_afip_qr_code) + '&amp;width=72&amp;height=72'" style="width:64px; height:64px;" alt="QR AFIP"/>
               </t>
               <t t-else="">
-                <div style="width:60px; height:60px; border:1px dashed #ccc; margin:0 auto; display:flex; align-items:center; justify-content:center;">
-                  <small style="font-size:7px;">QR Code<br/>(disponible)</small>
+                <div style="width:52px; height:52px; border:1px dashed #ccc; margin:0 auto; display:flex; align-items:center; justify-content:center;">
+                  <small style="font-size:6px;">QR</small>
                 </div>
               </t>
-              <div style="margin-top:4px;">
-                <small style="font-size:7px; color:#666;">QR Code segun RG AFIP 4294/2024</small>
+              <div style="margin-top:2px;">
+                <small style="font-size:6px; color:#666;">RG AFIP 4294/2024</small>
               </div>
             </div>
           </div>
-          <div class="col-7">
-            <table style="width:100%; margin-left:auto; font-size:11px;">
+          <div class="col-7 nakel-totals-table-wrap nakel-totales-mini">
+            <table style="width:100%; margin-left:auto; font-size:10px;">
               <tr>
                 <td style="text-align:right; padding:2px 4px; font-weight:700;">Subtotal:</td>
-                <td style="text-align:right; padding:2px 4px; width:32%;"><span t-esc="'%.2f' % (o.amount_untaxed or 0)"/></td>
+                <td style="text-align:right; padding:2px 4px; width:32%;"><span t-field="o.amount_untaxed" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
               </tr>
               <t t-if="o.tax_totals and o.tax_totals.get('subtotals')">
                 <t t-foreach="o.tax_totals['subtotals']" t-as="subtotal">
@@ -282,7 +396,7 @@
                       <t t-if="not es_factura_b or not es_percepcion_iibb">
                         <tr>
                           <td style="text-align:right; padding:2px 4px; font-weight:700;"><span t-esc="group_name"/>:</td>
-                          <td style="text-align:right; padding:2px 4px;"><span t-esc="'%.2f' % (tax_group.get('tax_amount_currency', 0))"/></td>
+                          <td style="text-align:right; padding:2px 4px;"><span t-out="tax_group.get('tax_amount_currency', 0)" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                         </tr>
                       </t>
                     </t>
@@ -292,7 +406,7 @@
               <t t-elif="o.amount_tax and o.amount_tax != 0">
                 <tr>
                   <td style="text-align:right; padding:2px 4px; font-weight:700;">IVA:</td>
-                  <td style="text-align:right; padding:2px 4px;"><span t-esc="'%.2f' % (o.amount_tax or 0)"/></td>
+                  <td style="text-align:right; padding:2px 4px;"><span t-field="o.amount_tax" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                 </tr>
               </t>
               <tr>
@@ -302,55 +416,32 @@
               </tr>
               <tr>
                 <td style="text-align:right; padding:2px 4px; font-weight:700; font-size:13px;">TOTAL:</td>
-                <td style="text-align:right; padding:2px 4px; font-size:13px; font-weight:700;"><span t-esc="'%.2f' % (o.amount_total or 0)"/></td>
+                <td style="text-align:right; padding:2px 4px; font-size:13px; font-weight:700;"><span t-field="o.amount_total" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
               </tr>
             </table>
           </div>
         </div>
 
-        <div style="border-top:1px solid #d0d0d0; padding-top:8px; text-align:center; font-size:11px; line-height:1.4;">
-          <div style="font-weight:700;">INFORMACIÓN AFIP</div>
-          <div style="font-style:italic;">
-            Factura <t t-out="document_letter"/> - <span t-out="receptor_condicion_leyenda"/>
+        <div class="nakel-pie-fiscal">
+          <div class="nakel-pie-fiscal-titulo">
+            INFORMACIÓN AFIP — Factura <t t-out="document_letter"/> · <span t-out="receptor_condicion_leyenda"/>
           </div>
-          <div>Esta factura cumple con los requisitos de la RG AFIP 4294/2024</div>
-          <t t-if="o._fields.get('l10n_ar_afip_auth_code') and o.l10n_ar_afip_auth_code">
-            <div>Comprobante autorizado por AFIP/ARCA</div>
-          </t>
-          <t t-else="">
-            <div>(CAE disponible cuando se implemente facturación electrónica)</div>
-          </t>
-        </div>
-
-        <div style="text-align:center; font-size:10px; margin-top:10px; line-height:1.35;">
-          <div style="font-weight:700;">
-            <span t-out="receptor_condicion_leyenda"/>
+          <div>
+            Cumple RG AFIP 4294/2024
+            <t t-if="o._fields.get('l10n_ar_afip_auth_code') and o.l10n_ar_afip_auth_code"> · Autorizado AFIP/ARCA</t>
+            · Precios con IVA cuando corresponde
           </div>
-          <div>Los precios incluyen IVA cuando corresponde.</div>
-          <div>QR Code generado segun especificación AFIP.</div>
+          <div style="border-top:1px solid #bbb; margin-top:3px; padding-top:3px;">
+            <span style="color:#0095b6;" t-esc="company_website"/>
+            <span> · </span><span t-esc="company_email"/>
+            <span> · Tel: <span t-esc="company_phone"/></span>
+            <span> · CUIT: <span t-esc="formatted_vat"/></span>
+          </div>
         </div>
 
-        <div style="border-top:1px solid #111; margin-top:14px; padding-top:5px; text-align:center; font-size:10px; color:#3f3f3f;">
-          <span style="color:#0095b6;" t-esc="company_website"/>
-          <span style="padding:0 8px;">-</span>
-          <span>contacto: <span t-esc="company_email"/></span>
-          <span style="padding:0 8px;">-</span>
-          <span>Tel: <span t-esc="company_phone"/></span>
-          <span style="padding:0 8px;">-</span>
-          <span>CUIT: <span t-esc="formatted_vat"/></span>
-        </div>
-
-        <div style="margin-top:4px; font-size:8px; text-align:right; line-height:1.2; max-width:100%;">
-          <t t-if="o._fields.get('l10n_ar_afip_auth_code') and o.l10n_ar_afip_auth_code">
-            <div>CAE: <span t-field="o.l10n_ar_afip_auth_code"/></div>
-          </t>
-          <t t-if="o._fields.get('l10n_ar_afip_auth_code_due') and o.l10n_ar_afip_auth_code_due">
-            <div>Vto. CAE: <span t-field="o.l10n_ar_afip_auth_code_due"/></div>
-          </t>
-        </div>
+        <!-- CAE y Hoja X/Y: div.footer wkhtmltopdf -->
       </div>
       </t>
     </t>
   </t>
 </t>
-

@@ -334,20 +334,20 @@
               <tr t-if="not l.display_type or l.display_type == 'product'" class="nakel-line-product">
                 <td class="nakel-col-code" style="border:1px solid #111; padding:5px 3px; vertical-align:top; word-wrap:break-word;"><span t-field="l.product_id.default_code"/></td>
                 <td class="nakel-col-desc" style="border:1px solid #111; padding:5px 4px; vertical-align:top; word-wrap:break-word;"><span t-field="l.product_id.name"/></td>
-                <td class="nakel-col-qty" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:center;"><span t-esc="'%.2f' % (l.quantity or 0)"/></td>
-                <td class="nakel-col-price" style="border:1px solid #111; padding:5px 2px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-esc="'%.2f' % (l.price_unit or 0)"/></td>
+                <td class="nakel-col-qty" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:center;"><span t-field="l.quantity"/></td>
+                <td class="nakel-col-price" style="border:1px solid #111; padding:5px 2px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-field="l.price_unit" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                 <td class="nakel-col-tax-body" style="border:1px solid #111; padding:5px 4px; vertical-align:top; text-align:right; word-wrap:break-word;">
                   <t t-if="l.tax_ids">
                     <t t-set="nakel_is_refund" t-value="o.move_type in ('out_refund', 'in_refund')"/>
                     <t t-set="nakel_line_currency" t-value="l.currency_id if l.currency_id else o.currency_id"/>
                     <t t-set="tax_comp" t-value="l.tax_ids.compute_all(l.price_unit, nakel_line_currency, l.quantity, product=l.product_id, partner=o.partner_id, is_refund=nakel_is_refund)"/>
                     <t t-foreach="tax_comp.get('taxes') or []" t-as="tax_row">
-                      <div><span t-esc="(tax_row.get('name') or '').strip()"/> = <span t-esc="'%.2f' % (tax_row.get('amount') or 0)"/></div>
+                      <div><span t-esc="(tax_row.get('name') or '').strip()"/> = <span t-out="tax_row.get('amount') or 0.0" t-options='{"widget": "monetary", "display_currency": nakel_line_currency}'/></div>
                     </t>
                   </t>
                   <t t-else="">—</t>
                 </td>
-                <td class="nakel-col-sub" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-esc="'%.2f' % (l.price_subtotal or 0)"/></td>
+                <td class="nakel-col-sub" style="border:1px solid #111; padding:5px 3px; vertical-align:top; text-align:right; white-space:nowrap;"><span t-field="l.price_subtotal" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
               </tr>
               <!-- Sección -->
               <tr t-elif="l.display_type == 'line_section'" class="nakel-line-section">
@@ -385,7 +385,7 @@
             <table style="width:100%; margin-left:auto; font-size:10px;">
               <tr>
                 <td style="text-align:right; padding:2px 4px; font-weight:700;">Subtotal:</td>
-                <td style="text-align:right; padding:2px 4px; width:32%;"><span t-esc="'%.2f' % (o.amount_untaxed or 0)"/></td>
+                <td style="text-align:right; padding:2px 4px; width:32%;"><span t-field="o.amount_untaxed" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
               </tr>
               <t t-if="o.tax_totals and o.tax_totals.get('subtotals')">
                 <t t-foreach="o.tax_totals['subtotals']" t-as="subtotal">
@@ -396,7 +396,7 @@
                       <t t-if="not es_factura_b or not es_percepcion_iibb">
                         <tr>
                           <td style="text-align:right; padding:2px 4px; font-weight:700;"><span t-esc="group_name"/>:</td>
-                          <td style="text-align:right; padding:2px 4px;"><span t-esc="'%.2f' % (tax_group.get('tax_amount_currency', 0))"/></td>
+                          <td style="text-align:right; padding:2px 4px;"><span t-out="tax_group.get('tax_amount_currency', 0)" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                         </tr>
                       </t>
                     </t>
@@ -406,7 +406,7 @@
               <t t-elif="o.amount_tax and o.amount_tax != 0">
                 <tr>
                   <td style="text-align:right; padding:2px 4px; font-weight:700;">IVA:</td>
-                  <td style="text-align:right; padding:2px 4px;"><span t-esc="'%.2f' % (o.amount_tax or 0)"/></td>
+                  <td style="text-align:right; padding:2px 4px;"><span t-field="o.amount_tax" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                 </tr>
               </t>
               <tr>
@@ -416,7 +416,7 @@
               </tr>
               <tr>
                 <td style="text-align:right; padding:2px 4px; font-weight:700; font-size:13px;">TOTAL:</td>
-                <td style="text-align:right; padding:2px 4px; font-size:13px; font-weight:700;"><span t-esc="'%.2f' % (o.amount_total or 0)"/></td>
+                <td style="text-align:right; padding:2px 4px; font-size:13px; font-weight:700;"><span t-field="o.amount_total" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
               </tr>
             </table>
           </div>

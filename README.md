@@ -32,7 +32,8 @@ El subárbol duplicado **`nakel_odoo/nakel_odoo/`** (misma forma de `addons/`, `
 
 ## Módulos (prioridad 1 / instalados en `master_dev`)
 
-- `addons/nakel_picking` (`nakel_picking`)
+- `addons/nakel_picking` (`nakel_picking`) — reporte PDF de **olas/batch**
+- `addons/nakel_report_picking` (`nakel_report_picking`) — reporte PDF de **PICK** individual (demanda OV, valoración)
 - `addons/nakel_fix_pick` (`nakel_fix_pick`)
 - `addons/nakel_wave_picking_link` (`nakel_wave_picking_link`)
 - `addons/modulo_rg5329` (`modulo_rg5329`)

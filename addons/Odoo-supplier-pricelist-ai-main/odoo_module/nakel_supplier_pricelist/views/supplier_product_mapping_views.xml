@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── LIST VIEW ──────────────────────────────────────────────────────── -->
+    <record id="view_supplier_product_mapping_list" model="ir.ui.view">
+        <field name="name">supplier.product.mapping.list</field>
+        <field name="model">supplier.product.mapping</field>
+        <field name="arch" type="xml">
+            <list string="Memoria de matches confirmados"
+                  default_order="times_used desc">
+                <field name="partner_id"/>
+                <field name="supplier_product_name"/>
+                <field name="supplier_product_code" optional="hide"/>
+                <field name="product_tmpl_id"/>
+                <field name="times_used" string="Veces usado"/>
+                <field name="confirmed_by" widget="many2one"
+                       optional="show"/>
+                <field name="confirmed_date" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── SEARCH VIEW ────────────────────────────────────────────────────── -->
+    <record id="view_supplier_product_mapping_search" model="ir.ui.view">
+        <field name="name">supplier.product.mapping.search</field>
+        <field name="model">supplier.product.mapping</field>
+        <field name="arch" type="xml">
+            <search string="Buscar en memoria de matches">
+                <field name="supplier_product_name" string="Nombre proveedor"/>
+                <field name="product_tmpl_id" string="Producto Odoo"/>
+                <field name="partner_id" string="Proveedor"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_partner" string="Proveedor"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_product" string="Producto Odoo"
+                            context="{'group_by': 'product_tmpl_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── FORM VIEW ──────────────────────────────────────────────────────── -->
+    <record id="view_supplier_product_mapping_form" model="ir.ui.view">
+        <field name="name">supplier.product.mapping.form</field>
+        <field name="model">supplier.product.mapping</field>
+        <field name="arch" type="xml">
+            <form string="Match confirmado">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="supplier_product_name"
+                                   placeholder="Nombre en la lista del proveedor"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Proveedor">
+                            <field name="partner_id"
+                                   options="{'no_create': True}"/>
+                            <field name="supplier_product_code"/>
+                        </group>
+                        <group string="Producto Odoo">
+                            <field name="product_tmpl_id"
+                                   options="{'no_create': True}"/>
+                            <field name="times_used" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Auditoría" col="2">
+                        <field name="confirmed_by" readonly="1"
+                               widget="many2one"/>
+                        <field name="confirmed_date" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── ACTION ─────────────────────────────────────────────────────────── -->
+    <record id="action_supplier_product_mapping" model="ir.actions.act_window">
+        <field name="name">Memoria de Matches</field>
+        <field name="res_model">supplier.product.mapping</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                La memoria de matches está vacía
+            </p>
+            <p>
+                Cada vez que confirmás un match en una importación,
+                el sistema lo recuerda aquí para futuros usos.
+            </p>
+        </field>
+    </record>
+
+</odoo>

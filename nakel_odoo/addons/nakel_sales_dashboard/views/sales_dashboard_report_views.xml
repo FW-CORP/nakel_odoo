@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_nakel_sales_dashboard_report_search" model="ir.ui.view">
+        <field name="name">nakel.sales.dashboard.report.search</field>
+        <field name="model">nakel.sales.dashboard.report</field>
+        <field name="arch" type="xml">
+            <search string="Ventas Nakel">
+                <field name="document_name"/>
+                <field name="partner_id"/>
+                <field name="salesperson_id"/>
+                <field name="warehouse_id"/>
+                <field name="pos_config_id"/>
+                <field name="journal_id"/>
+                <field name="product_id"/>
+                <filter name="source_sale" string="Ventas estándar" domain="[('source_type', '=', 'sale')]"/>
+                <filter name="source_pos" string="Punto de venta" domain="[('source_type', '=', 'pos')]"/>
+                <filter name="date_order_filter" string="Fecha" date="date_order"/>
+                <separator/>
+                <filter name="group_by_source" string="Canal" context="{'group_by': 'source_type'}"/>
+                <filter name="group_by_salesperson" string="Vendedor" context="{'group_by': 'salesperson_id'}"/>
+                <filter name="group_by_warehouse" string="Sucursal / almacén" context="{'group_by': 'warehouse_id'}"/>
+                <filter name="group_by_pos" string="Punto de venta" context="{'group_by': 'pos_config_id'}"/>
+                <filter name="group_by_team" string="Equipo de ventas" context="{'group_by': 'team_id'}"/>
+                <filter name="group_by_month" string="Mes" context="{'group_by': 'date_order:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_nakel_sales_dashboard_report_list" model="ir.ui.view">
+        <field name="name">nakel.sales.dashboard.report.list</field>
+        <field name="model">nakel.sales.dashboard.report</field>
+        <field name="arch" type="xml">
+            <list string="Ventas Nakel" create="false" edit="false" delete="false" duplicate="false" default_order="date_order desc">
+                <button name="action_open_source" type="object" string="Abrir" icon="fa-external-link"/>
+                <field name="date_order"/>
+                <field name="source_type"/>
+                <field name="document_name"/>
+                <field name="salesperson_id"/>
+                <field name="partner_id"/>
+                <field name="warehouse_id"/>
+                <field name="pos_config_id" optional="show"/>
+                <field name="journal_id" optional="hide"/>
+                <field name="team_id" optional="hide"/>
+                <field name="product_id" optional="hide"/>
+                <field name="source_state" optional="hide"/>
+                <field name="document_count" sum="Documentos"/>
+                <field name="line_count" sum="Líneas"/>
+                <field name="qty" sum="Cantidad"/>
+                <field name="amount_untaxed" sum="Base"/>
+                <field name="amount_tax" sum="Impuestos"/>
+                <field name="amount_total" sum="Total"/>
+                <field name="margin" sum="Margen" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_nakel_sales_dashboard_report_pivot" model="ir.ui.view">
+        <field name="name">nakel.sales.dashboard.report.pivot</field>
+        <field name="model">nakel.sales.dashboard.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Ventas Nakel" display_quantity="false" default_order="amount_total desc">
+                <field name="source_type" type="row"/>
+                <field name="warehouse_id" type="row"/>
+                <field name="salesperson_id" type="row"/>
+                <field name="date_order" interval="month" type="col"/>
+                <field name="amount_total" type="measure"/>
+                <field name="amount_untaxed" type="measure"/>
+                <field name="amount_tax" type="measure"/>
+                <field name="margin" type="measure"/>
+                <field name="qty" type="measure"/>
+                <field name="document_count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_nakel_sales_dashboard_report_graph" model="ir.ui.view">
+        <field name="name">nakel.sales.dashboard.report.graph</field>
+        <field name="model">nakel.sales.dashboard.report</field>
+        <field name="arch" type="xml">
+            <graph string="Ventas Nakel por mes" type="bar" stacked="0" order="DESC">
+                <field name="date_order" interval="month"/>
+                <field name="source_type"/>
+                <field name="amount_total" type="measure"/>
+            </graph>
+        </field>
+    </record>
+</odoo>

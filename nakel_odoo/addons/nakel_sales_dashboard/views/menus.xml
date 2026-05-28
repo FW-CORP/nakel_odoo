@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_nakel_sales_dashboard_report" model="ir.actions.act_window">
+        <field name="name">Ventas Nakel - Análisis</field>
+        <field name="res_model">nakel.sales.dashboard.report</field>
+        <field name="search_view_id" ref="view_nakel_sales_dashboard_report_search"/>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="context" eval="{
+            'pivot_row_groupby': ['source_type', 'warehouse_id', 'salesperson_id'],
+            'pivot_column_groupby': ['date_order:month'],
+            'pivot_measures': ['amount_total', 'document_count', 'qty'],
+            'graph_measure': 'amount_total',
+        }"/>
+        <field name="target">current</field>
+    </record>
+
+    <record id="action_nakel_sales_dashboard_report_view_pivot" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">pivot</field>
+        <field name="view_id" ref="view_nakel_sales_dashboard_report_pivot"/>
+        <field name="act_window_id" ref="action_nakel_sales_dashboard_report"/>
+    </record>
+
+    <record id="action_nakel_sales_dashboard_report_view_graph" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">graph</field>
+        <field name="view_id" ref="view_nakel_sales_dashboard_report_graph"/>
+        <field name="act_window_id" ref="action_nakel_sales_dashboard_report"/>
+    </record>
+
+    <record id="action_nakel_sales_dashboard_report_view_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="3"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_nakel_sales_dashboard_report_list"/>
+        <field name="act_window_id" ref="action_nakel_sales_dashboard_report"/>
+    </record>
+
+    <record id="action_server_nakel_sales_dashboard_report" model="ir.actions.server">
+        <field name="name">Ventas Nakel - Análisis</field>
+        <field name="model_id" ref="model_nakel_sales_dashboard_report"/>
+        <field name="state">code</field>
+        <field name="code">action = env['ir.actions.actions']._for_xml_id('nakel_sales_dashboard.action_nakel_sales_dashboard_report')</field>
+    </record>
+
+    <menuitem
+        id="menu_nakel_sales_dashboard_report"
+        name="Ventas Nakel - Análisis"
+        parent="sale.sale_order_menu"
+        action="action_nakel_sales_dashboard_report"
+        sequence="47"
+        groups="base.group_system,sales_team.group_sale_manager,nakel_sales_dashboard.group_nakel_sales_dashboard_manager"
+    />
+</odoo>

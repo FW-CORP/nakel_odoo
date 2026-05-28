@@ -29,15 +29,19 @@ Prod-Incidencias/wave156/
 
 ### Cómo leer el diferencial
 
-Cada corrida de `run_backup.sh` **crea archivos nuevos** (no pisa los viejos). El diff compara el **último** `move_lines` con el **anterior**:
+`run_backup.sh` genera **dos diffs**:
 
-| Columna | Significado |
-|---------|-------------|
-| `descuento_before` / `descuento_after` | Unidades descontadas (barcode inverso) en cada instante |
-| `delta_descuento` | Cuánto **bajaron** entre respaldos (`> 0` = descontaron más en este intervalo) |
-| `delta_qty_done` | Cambio en cantidad hecha (suele ser negativo si descontaron) |
+1. **`_*_intervalo`** — última corrida vs la anterior (cambios recientes, ej. turno).
+2. **`_*_baseline`** — última corrida vs el **primer** snapshot del día (progreso total).
 
-Si el diff sale **vacío** (0 cambios), en ese intervalo no hubo movimiento en BD (o aún no corrieron la 2.ª vez).
+| Señal en diff | Significado |
+|---------------|-------------|
+| `solo_en_anterior` (extras) | Línea que **desapareció** del activo (típico: anulada `quantity→0`) |
+| `change_kind=anulada_quantity_a_0` | Misma línea, pasó de `quantity>0` a `0` (CSV nuevo con todas las líneas) |
+| `move_lines_anuladas` en summary | Cuántas líneas están en cero ahora |
+| `descuento_qty_done` | Casi siempre 0 en barcode inverso; no usar solo esto |
+
+Si `130036` vs `130243` da **0 cambios**, es normal: ambos ya tienen 901 activas. Mirá **`_*_baseline`** (922→901 = 21 anulaciones).
 
 ## Comando recomendado (cada 4–6 h o al cierre de turno)
 
@@ -45,6 +49,15 @@ Si el diff sale **vacío** (0 cambios), en ese intervalo no hubo movimiento en B
 
 ```bash
 /media/klap/raid5/cursor_files/nakel/Prod-Incidencias/wave156/run_backup.sh
+```
+
+**Cada 15 min durante 3 horas** (en segundo plano; log en `backups/scheduled_3h_*.log`):
+
+```bash
+cd /media/klap/raid5/cursor_files/nakel/Prod-Incidencias/wave156
+nohup ./run_backup_3h_every_15m.sh &
+# Ver progreso: tail -f backups/scheduled_3h_*.log
+# Detener: pkill -f run_backup_3h_every_15m
 ```
 
 Solo backup (sin diff):

@@ -1,0 +1,96 @@
+# ─── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+venv/
+.venv/
+env/
+.env/
+
+# ─── Secretos y configuración local ───────────────────────────────
+# El .env real tiene GEMINI_API_KEY y otras credenciales — NO subir
+.env
+.env.local
+.env.production
+*.pem
+*.key
+*.crt
+*_rsa
+*_rsa.pub
+secrets/
+credentials/
+
+# Configuración MCP local con credenciales de Odoo
+.mcp.json
+
+# ─── ZIPs de release ──────────────────────────────────────────────
+# Los ZIPs del módulo Odoo se generan en cada release
+*.zip
+*.tar.gz
+*.7z
+
+# ─── Archivos temporales y de test sueltos ────────────────────────
+# Scripts puntuales que se crearon para pruebas y no son parte del proyecto
+test_*.py
+analyze_*.py
+check_*.py
+verify_*.py
+diagnose_*.py
+smoke_*.py
+test_dump.py
+test_strategies.py
+
+# ─── Datos de proveedores y muestras (no compartir) ───────────────
+# PDFs/Excels reales de listas de proveedores
+data/
+samples/
+*.pdf
+*.xls
+*.xlsx
+*.csv
+!**/requirements.txt
+# Permitir el archivo de seguridad del módulo (Odoo lo necesita en el repo)
+!odoo_module/nakel_supplier_pricelist/security/ir.model.access.csv
+# Permitir docs/diagrams.pdf si hubiera en el futuro
+!docs/**/*.pdf
+
+# ─── Odoo ─────────────────────────────────────────────────────────
+*.pot
+*.mo
+
+# ─── Sistema operativo ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+*.swp
+*.swo
+*~
+
+# ─── Editores e IDEs ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.claude/
+
+# ─── Logs ─────────────────────────────────────────────────────────
+*.log
+logs/
+nakel-ai.log
+
+# ─── Archivos de sesión / build / cache ───────────────────────────
+*.bak
+.cache/
+build/
+dist/
+node_modules/
