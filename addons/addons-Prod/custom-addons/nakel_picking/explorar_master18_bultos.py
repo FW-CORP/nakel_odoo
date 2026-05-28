@@ -25,9 +25,16 @@ def _load_configs():
             'username': ODOO_CONFIG_MASTER_DEV['username'], 'password': ODOO_CONFIG_MASTER_DEV['password'],
         })
     except ImportError:
-        configs = [
-            {'url': 'https://nakel.net.ar', 'db': 'master_18', 'username': 'odoo@nakel.net.ar', 'password': 'REDACTED'},
-        ]
+        url = os.environ.get("ODOO_URL", "https://nakel.net.ar")
+        db = os.environ.get("ODOO_DB", "master_18")
+        user = os.environ.get("ODOO_USERNAME", "")
+        pwd = os.environ.get("ODOO_PASSWORD", "")
+        if not user or not pwd:
+            raise SystemExit(
+                "Faltan credenciales: config_nakel.py en PYTHONPATH o "
+                "ODOO_USERNAME / ODOO_PASSWORD en el entorno."
+            )
+        configs = [{"url": url, "db": db, "username": user, "password": pwd}]
     return configs
 
 CONFIGS = _load_configs()

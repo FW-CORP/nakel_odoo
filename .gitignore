@@ -38,6 +38,7 @@ db_mssql/
 
 # Backup local de addons productivos (no versionar)
 nakel_odoo/addons/addons-Prod/
+addons/addons-Prod/
 
 # Evitar repos legacy embebidos en QWeb
 qweb/trash/legacy_repo/QWeb-Modelos-templates/

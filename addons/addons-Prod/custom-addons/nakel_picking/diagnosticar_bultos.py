@@ -5,14 +5,27 @@ Analiza productos de un lote para ver uom_po_id, packaging, etc.
 Uso: python3 diagnosticar_bultos.py [batch_id]
 """
 
-import xmlrpc.client
+import os
 import sys
+import xmlrpc.client
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+
+try:
+    from config_nakel import ODOO_CONFIG_MASTER18 as _CFG  # type: ignore
+except ImportError:
+    _CFG = {
+        "url": os.environ.get("ODOO_URL", "https://nakel.net.ar"),
+        "db": os.environ.get("ODOO_DB", "master_18"),
+        "username": os.environ.get("ODOO_USERNAME", ""),
+        "password": os.environ.get("ODOO_PASSWORD", ""),
+    }
 
 CONFIG = {
-    'url': 'https://nakel.net.ar',   # o https://dev.nakel.net.ar
-    'db': 'master_18',               # o master_dev
-    'username': 'odoo@nakel.net.ar',
-    'password': 'REDACTED',
+    "url": _CFG["url"],
+    "db": _CFG["db"],
+    "username": _CFG["username"],
+    "password": _CFG["password"],
 }
 
 def conectar(config):
