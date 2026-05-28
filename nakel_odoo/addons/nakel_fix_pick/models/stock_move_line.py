@@ -2,7 +2,7 @@
 
 from odoo import _, api, models
 from odoo.exceptions import UserError
-from odoo.tools.float_utils import float_is_zero
+from odoo.tools.float_utils import float_compare, float_is_zero
 
 
 def _nakel_float_from_vals(vals: dict, key: str):
@@ -16,20 +16,17 @@ def _nakel_float_from_vals(vals: dict, key: str):
 
 def _nakel_adjust_vals_pick_consistency(vals: dict) -> dict:
     """
-    Align picked (and qty_done when the ORM exposes it) with positive quantity / qty_done
-    coming from Barcode create/write payloads.
+    Alinear picked con qty_done en writes de Barcode.
+
+    No copiar quantity -> qty_done: tras Modo demanda OV la reserva ya está llena y
+    sumar escaneos duplicaba qty_done (24/12). El pre-verde del batch fija qty_done.
     """
     vals = dict(vals)
     qd = _nakel_float_from_vals(vals, "qty_done") if "qty_done" in vals else None
     qt = _nakel_float_from_vals(vals, "quantity") if "quantity" in vals else None
 
-    positives = [v for v in (qd, qt) if v is not None and v > 0.0]
-    max_positive = max(positives) if positives else None
-
-    if max_positive is not None and max_positive > 0.0:
+    if qd is not None and qd > 0.0:
         vals["picked"] = True
-        if qt is not None and qt > 0.0 and (qd is None or qd <= 0.0):
-            vals["qty_done"] = qt
     elif qd is not None and qd <= 0.0 and (qt is None or qt <= 0.0):
         if "picked" not in vals:
             vals["picked"] = False
@@ -56,37 +53,95 @@ class StockMoveLine(models.Model):
         )
         return str(val).strip().lower() in ("1", "true", "yes", "y", "on")
 
+    @api.model
+    def _nakel_skip_fix_pick_sync(self):
+        return bool(
+            self.env.context.get("nakel_demand_mode_bump")
+            or self.env.context.get("nakel_barcode_pre_green")
+        )
+
+    def _nakel_cap_vals_to_move_demand(self, vals):
+        """Tope qty_done/quantity al pedido OV en líneas de olas WAVE."""
+        vals = dict(vals)
+        if self._nakel_skip_fix_pick_sync():
+            return vals
+        if "qty_done" not in vals and "quantity" not in vals:
+            return vals
+
+        move = self.move_id
+        picking = self.picking_id
+        if not move and vals.get("move_id"):
+            move = self.env["stock.move"].browse(vals["move_id"])
+        if not picking and vals.get("picking_id"):
+            picking = self.env["stock.picking"].browse(vals["picking_id"])
+        if not picking and move:
+            picking = move.picking_id
+
+        batch = picking.batch_id if picking else self.env["stock.picking.batch"]
+        if not batch or not getattr(batch, "is_wave", False) or not move:
+            return vals
+
+        demand = move.product_uom_qty
+        rounding = move.product_uom.rounding
+        for key in ("qty_done", "quantity"):
+            if key not in vals:
+                continue
+            raw = _nakel_float_from_vals(vals, key)
+            if raw is not None and float_compare(raw, demand, precision_rounding=rounding) > 0:
+                vals[key] = demand
+
+        # Flujo invertido: si ya hay qty_done parcial, no dejar sumar quantity por escaneo.
+        if len(self) == 1:
+            qd_current = self.qty_done or 0.0
+            line_rounding = self.product_uom_id.rounding
+            if not float_is_zero(qd_current, precision_rounding=line_rounding):
+                for key in ("qty_done", "quantity"):
+                    if key not in vals:
+                        continue
+                    raw = _nakel_float_from_vals(vals, key)
+                    if raw is not None and float_compare(raw, qd_current, precision_rounding=line_rounding) > 0:
+                        vals[key] = qd_current
+        return vals
+
+    def _nakel_apply_fix_pick_vals(self, vals):
+        vals = self._nakel_cap_vals_to_move_demand(vals)
+        return _nakel_adjust_vals_pick_consistency(vals)
+
     @api.model_create_multi
     def create(self, vals_list):
-        if not self._nakel_fix_pick_enabled():
+        if not self._nakel_fix_pick_enabled() or self._nakel_skip_fix_pick_sync():
             return super().create(vals_list)
         keys = ("qty_done", "quantity", "picked")
         new_vals_list = []
         for vals in vals_list:
             vals = dict(vals)
             if any(k in vals for k in keys):
-                vals = _nakel_adjust_vals_pick_consistency(vals)
+                temp = self.new(vals)
+                vals = temp._nakel_apply_fix_pick_vals(vals)
             new_vals_list.append(vals)
         return super().create(new_vals_list)
 
     def write(self, vals):
         """
-        If enabled, keep `picked` (and often `qty_done`) consistent when Barcode writes quantities.
-
-        Rationale (observed in Nakel):
-        - Barcode puede mandar `picked: False` junto con cantidad > 0; la guarda antigua
-          (`if "picked" not in vals`) saltaba y dejaba datos incoherentes.
-        - A veces solo llega `quantity`; si queda `qty_done` en 0, la UI puede mostrar 0 / … tras refresh.
-
-        Nota: `quantity` es la reserva operativa; `qty_done` es lo hecho. Solo copiamos
-        `quantity` -> `qty_done` cuando hay cantidad > 0 y `qty_done` no viene positivo en `vals`.
+        Si está activo, mantiene picked coherente con qty_done y capa cantidades al pedido OV
+        en olas WAVE (evita sobrepick 24/12 tras escaneo sobre reserva llena).
         """
-        if not self._nakel_fix_pick_enabled():
+        if not self._nakel_fix_pick_enabled() or self._nakel_skip_fix_pick_sync():
             return super().write(vals)
 
         keys = ("qty_done", "quantity", "picked")
         if not any(k in vals for k in keys):
             return super().write(vals)
+
+        if len(self) == 1:
+            vals = self._nakel_apply_fix_pick_vals(dict(vals))
+            return super().write(vals)
+
+        if any(k in vals for k in ("qty_done", "quantity")):
+            for line in self:
+                line_vals = line._nakel_apply_fix_pick_vals(dict(vals))
+                super(StockMoveLine, line).write(line_vals)
+            return True
 
         vals = _nakel_adjust_vals_pick_consistency(dict(vals))
         return super().write(vals)

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="view_sale_order_filter_nakel_wave_planner" model="ir.ui.view">
+    <field name="name">sale.order.search.nakel.wave.planner</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="nakel_wave_picking_link.view_sale_order_filter_nakel_wave"/>
+    <field name="arch" type="xml">
+      <xpath expr="//filter[@name='nakel_wave_set']" position="after">
+        <filter
+            string="Sin ola Nakel"
+            name="nakel_wave_missing"
+            domain="[('nakel_wave_batch_id', '=', False), ('state', 'in', ('sale', 'done'))]"
+        />
+      </xpath>
+      <xpath expr="//field[@name='nakel_wave_batch_id']" position="after">
+        <field name="nakel_shipping_zone_tag_ids" string="Etiqueta zona"/>
+        <field name="partner_shipping_id"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_sale_order_tree_nakel_wave_planner" model="ir.ui.view">
+    <field name="name">sale.order.tree.nakel.wave.planner</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.sale_order_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='partner_id']" position="after">
+        <field name="nakel_shipping_zone_tag_ids" widget="many2many_tags" optional="hide"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_picking_batch_form_nakel_wave_planner" model="ir.ui.view">
+    <field name="name">stock.picking.batch.form.nakel.wave.planner</field>
+    <field name="model">stock.picking.batch</field>
+    <field name="inherit_id" ref="stock_picking_batch.stock_picking_batch_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//header" position="inside">
+        <button
+            name="%(action_nakel_wave_planner_wizard)d"
+            type="action"
+            string="Agregar OV por zona"
+            class="btn-secondary"
+            groups="stock.group_stock_user"
+            invisible="not is_wave or state not in ('draft', 'in_progress')"
+        />
+      </xpath>
+    </field>
+  </record>
+</odoo>

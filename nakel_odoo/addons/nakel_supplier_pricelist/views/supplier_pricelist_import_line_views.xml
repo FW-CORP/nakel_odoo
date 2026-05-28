@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── LIST VIEW de líneas (usado por los stat buttons) ─────────────────── -->
+    <record id="view_supplier_pricelist_import_line_list" model="ir.ui.view">
+        <field name="name">supplier.pricelist.import.line.list</field>
+        <field name="model">supplier.pricelist.import.line</field>
+        <field name="arch" type="xml">
+            <list string="Líneas de importación"
+                  decoration-success="match_status == 'auto'"
+                  decoration-warning="match_status == 'review'"
+                  decoration-danger="match_status == 'no_match'"
+                  decoration-muted="match_status == 'rejected'">
+                <field name="supplier_product_name"/>
+                <field name="supplier_presentation" optional="hide"/>
+                <field name="price_with_vat" string="Precio c/IVA"/>
+                <field name="price_without_vat" string="Costo neto"/>
+                <field name="product_tmpl_id" string="Producto Odoo"/>
+                <field name="current_cost" string="Precio anterior proveedor"/>
+                <field name="cost_delta_display" string="Δ%"
+                       decoration-danger="delta_color == 'danger'"
+                       decoration-warning="delta_color == 'warning'"
+                       decoration-success="delta_color == 'success'"
+                       decoration-muted="delta_color == 'muted'"/>
+                <field name="delta_color" column_invisible="1"/>
+                <field name="cost_delta_pct" optional="hide" string="Δ% (raw)"/>
+                <field name="has_comparable_cost" column_invisible="1"/>
+                <field name="confidence_score" string="Conf. %"/>
+                <field name="match_status" widget="badge"
+                       decoration-success="match_status == 'auto'"
+                       decoration-warning="match_status == 'review'"
+                       decoration-danger="match_status == 'no_match'"
+                       decoration-info="match_status == 'confirmed'"
+                       decoration-muted="match_status == 'rejected'"/>
+                <field name="applied" string="✓"/>
+                <field name="match_notes" optional="hide"/>
+                <button name="action_confirm_match" type="object"
+                        icon="fa-check" title="Confirmar"
+                        class="text-success"
+                        invisible="match_status not in ('review', 'no_match')"/>
+                <button name="action_reject" type="object"
+                        icon="fa-times" title="Rechazar"
+                        class="text-danger"
+                        invisible="match_status in ('rejected', 'no_match')"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── SEARCH VIEW de líneas ─────────────────────────────────────────────── -->
+    <record id="view_supplier_pricelist_import_line_search" model="ir.ui.view">
+        <field name="name">supplier.pricelist.import.line.search</field>
+        <field name="model">supplier.pricelist.import.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="supplier_product_name" string="Producto proveedor"/>
+                <field name="product_tmpl_id" string="Producto Odoo"/>
+                <separator/>
+                <filter name="auto" string="Match automático"
+                        domain="[('match_status', '=', 'auto')]"/>
+                <filter name="review" string="Requieren revisión"
+                        domain="[('match_status', '=', 'review')]"/>
+                <filter name="no_match" string="Sin match"
+                        domain="[('match_status', '=', 'no_match')]"/>
+                <filter name="confirmed" string="Confirmados"
+                        domain="[('match_status', '=', 'confirmed')]"/>
+                <separator/>
+                <filter name="applied" string="Aplicados"
+                        domain="[('applied', '=', True)]"/>
+                <filter name="not_applied" string="Pendientes de aplicar"
+                        domain="[('applied', '=', False),
+                                 ('match_status', 'in', ('auto', 'confirmed'))]"/>
+            </search>
+        </field>
+    </record>
+
+</odoo>

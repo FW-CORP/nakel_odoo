@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_nakel_wave_coverage_gap_line_list" model="ir.ui.view">
+        <field name="name">nakel.wave.coverage.gap.line.list</field>
+        <field name="model">nakel.wave.coverage.gap.line</field>
+        <field name="arch" type="xml">
+            <list create="false" delete="false" editable="bottom">
+                <field name="selected" widget="boolean_toggle"/>
+                <field name="fixable" column_invisible="1"/>
+                <field name="sale_order_id" readonly="1"/>
+                <field name="product_id" readonly="1"/>
+                <field name="qty_ov" readonly="1"/>
+                <field name="qty_in_wave" readonly="1"/>
+                <field name="gap_reason" widget="badge" readonly="1"
+                       decoration-danger="gap_reason in ('no_transfer', 'outside_wave', 'partial_wave')"
+                       decoration-warning="gap_reason == 'reservation'"/>
+                <field name="picking_names" optional="show" readonly="1"/>
+                <field name="action_hint" readonly="1"/>
+                <field name="sale_line_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_nakel_wave_coverage_gap_wizard_form" model="ir.ui.view">
+        <field name="name">nakel.wave.coverage.gap.wizard.form</field>
+        <field name="model">nakel.wave.coverage.gap.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Qué falta en la ola">
+                <group>
+                    <group>
+                        <field name="batch_id" readonly="1"/>
+                        <field name="summary" readonly="1"/>
+                    </group>
+                    <group>
+                        <field name="apply_demand_mode"/>
+                    </group>
+                </group>
+                <p class="text-muted">
+                    Marcá los productos y usá <strong>Agregar a la ola</strong> para generar el PICK en Odoo
+                    y sumarlo a esta ola. Después el operario los ve en Barcode; si no hay en depósito, pickea 0.
+                </p>
+                <div class="mb-2">
+                    <button name="action_select_all_fixable" type="object" string="Seleccionar agregables" class="btn-secondary"/>
+                    <button name="action_deselect_all" type="object" string="Quitar selección" class="btn-secondary"/>
+                </div>
+                <field name="line_ids" nolabel="1"/>
+                <footer>
+                    <button name="action_add_selected_to_wave" type="object"
+                            string="Agregar a la ola" class="btn-primary"
+                            confirm="¿Generar/agregar PICK de las líneas marcadas a esta ola?"/>
+                    <button string="Cerrar" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_nakel" model="ir.ui.view">
+        <field name="name">res.config.settings.form.nakel</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="Listas de Precios IA" name="nakel_supplier_pricelist">
+                    <block title="Configuración del Servicio IA">
+                        <setting string="URL del Servicio IA"
+                                 help="Dirección del servicio Python de matching (ej: http://192.168.1.10:8001)">
+                            <field name="ai_service_url" placeholder="http://localhost:8001"/>
+                        </setting>
+                        <setting string="IVA por defecto (%)"
+                                 help="Tasa de IVA a descontar de los precios de lista">
+                            <field name="ai_default_vat_rate"/>
+                        </setting>
+                        <setting string="Confianza mínima para match automático (%)"
+                                 help="Líneas con confianza >= este valor se marcan como automáticas">
+                            <field name="ai_auto_apply_threshold"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Hereda stock.report_picking («Operaciones de recolección»).
+        Sin tocar nakel_picking (olas/batch).
+    -->
+    <template id="report_picking_nakel"
+              inherit_id="stock.report_picking"
+              name="Nakel Picking Operations Report">
+
+        <!-- Ocultar Desde / A (líneas) -->
+        <xpath expr="//th[@name='th_from']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//th[@name='th_to']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//tr[contains(@t-foreach, 'move_line_ids_without_package')]/td[@groups='stock.group_stock_multi_locations'][1]" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//tr[contains(@t-foreach, 'move_line_ids_without_package')]/td[@groups='stock.group_stock_multi_locations'][2]" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+
+        <!-- Ocultar Desde / A (tabla de paquetes, si aplica) -->
+        <xpath expr="//th[@name='th_pko_from']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//th[@name='th_pki_from']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//tr[contains(@t-foreach, 'package_level_ids')]/td[@groups='stock.group_stock_multi_locations'][1]" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//tr[contains(@t-foreach, 'package_level_ids')]/td[@groups='stock.group_stock_multi_locations'][2]" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+
+        <!-- Columna Demanda (después de Cantidad: Producto | Cantidad | Demanda) -->
+        <xpath expr="//th[@name='th_from']" position="before">
+            <th name="th_demand" class="text-end">
+                <strong>Demanda</strong>
+            </th>
+        </xpath>
+        <xpath expr="//tr[contains(@t-foreach, 'move_line_ids_without_package')]/td[contains(@class, 'o_td_quantity')]" position="after">
+            <td name="td_demand" class="text-end o_td_demand">
+                <span t-esc="o.nakel_report_demand_qty(ml)"/>
+                <span t-field="ml.product_uom_id" groups="uom.group_uom"/>
+            </td>
+        </xpath>
+
+        <!-- Valoración / cobranza (misma idea que ola, un solo picking) -->
+        <xpath expr="//p[@t-field='o.note']" position="before">
+            <div class="nakel-pick-valuation mt-4">
+                <h3 class="mb-3">Valoración</h3>
+                <t t-set="valuation_lines" t-value="o._get_valuation_lines()"/>
+                <t t-if="valuation_lines">
+                    <table class="table table-sm table-bordered">
+                        <colgroup>
+                            <col style="width: 14%;"/>
+                            <col style="width: 30%;"/>
+                            <col style="width: 14%;"/>
+                            <col style="width: 14%;"/>
+                            <col style="width: 14%;"/>
+                            <col style="width: 14%;"/>
+                        </colgroup>
+                        <thead style="background-color: #f8f9fa;">
+                            <tr>
+                                <th>PICK</th>
+                                <th>Cliente</th>
+                                <th>OV</th>
+                                <th class="text-end">Total OV</th>
+                                <th>Factura</th>
+                                <th class="text-end">Total factura</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="valuation_lines" t-as="vl">
+                                <tr>
+                                    <td>
+                                        <span t-esc="vl.get('picking_short') or (vl.get('picking').name if vl.get('picking') else '')"/>
+                                    </td>
+                                    <td>
+                                        <span t-esc="vl.get('partner_name') or '-'"/>
+                                    </td>
+                                    <td>
+                                        <span t-esc="vl.get('sale_name') or '-'"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <t t-if="vl.get('sale_currency')">
+                                            <span t-esc="vl.get('sale_total')"
+                                                  t-options='{"widget": "monetary", "display_currency": vl.get("sale_currency")}'/>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color:#777;">-</span>
+                                        </t>
+                                    </td>
+                                    <td>
+                                        <t t-if="vl.get('has_invoice')">
+                                            <span t-esc="vl.get('invoice_name') or '-'"/>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color:#777;">Sin factura</span>
+                                        </t>
+                                    </td>
+                                    <td class="text-end">
+                                        <t t-if="vl.get('has_invoice') and vl.get('currency')">
+                                            <span t-esc="vl.get('amount_total')"
+                                                  t-options='{"widget": "monetary", "display_currency": vl.get("currency")}'/>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color:#777;">-</span>
+                                        </t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                    <t t-if="valuation_lines[0].get('payment_term')">
+                        <p class="mb-0">
+                            <strong>Plazo de pago:</strong>
+                            <span t-esc="valuation_lines[0].get('payment_term')"/>
+                        </p>
+                    </t>
+                </t>
+                <t t-else="">
+                    <p class="text-muted mb-0">Sin datos de venta o facturación para este picking.</p>
+                </t>
+            </div>
+        </xpath>
+    </template>
+</odoo>

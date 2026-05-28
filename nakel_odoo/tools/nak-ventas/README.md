@@ -12,6 +12,8 @@ Scripts manuales (`--dry-run` / `--apply`) para mover stock disponible a **Rotur
 |--------|-------------|
 | [MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md](MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md) | **Dos perfiles:** CEN (cotizaciones **NAK** → `CEN/Roturas 2`) y **B3** (cotizaciones **Nakel SA** Belgrano 3 → `B3/Roturas 2`). Etiquetas, comandos, alias y referencia `master_dev`. |
 | [scripts/mover_disponible_pedidos_a_roturas2_master_dev.py](scripts/mover_disponible_pedidos_a_roturas2_master_dev.py) | Script XML-RPC (dry-run / apply). |
+| [CRON_MOVER_ROTURAS2_MASTER_DEV.md](CRON_MOVER_ROTURAS2_MASTER_DEV.md) | Acción planificada Odoo: mover cotizaciones `procesar` → Roturas 2. |
+| [cron_code/mover_roturas2_accion_planificada.py](cron_code/mover_roturas2_accion_planificada.py) | **Código a pegar** en Odoo (acción planificada). |
 | [CRON_DESECHO_ROTURAS2_MASTER_DEV.md](CRON_DESECHO_ROTURAS2_MASTER_DEV.md) | Acción planificada para **desechar** stock en Roturas 2 (CEN + B3) vía `stock.scrap`. |
 
 ## Comandos rápidos

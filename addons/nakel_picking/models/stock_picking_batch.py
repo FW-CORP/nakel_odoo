@@ -405,7 +405,7 @@ class StockPickingBatch(models.Model):
 
     def _format_total_display_for_line(self, line):
         """
-        Texto para columna TOTAL: bultos enteros + unidades sueltas, sin '0.17 bulto'.
+        Texto para columna TOTAL: bultos enteros + unidades sueltas según demanda OV.
         Ej.: 30 uds, bulto x20 -> '1 bulto + 10 Unidades (x20)'.
         """
         if not isinstance(line, dict):
@@ -416,7 +416,7 @@ class StockPickingBatch(models.Model):
         product = line.get('product')
         uom_name = (line.get('uom_name') or '').strip() or 'unidades'
         bulto_label = (line.get('bulto_name') or '').strip()
-        qty_line = float(line.get('quantity') or 0)
+        qty_line = float(line.get('demand_qty') or 0)
 
         if qty_line <= 0:
             return '-'
@@ -466,6 +466,15 @@ class StockPickingBatch(models.Model):
         u_part = self._pretty_qty_for_display(remainder)
         return f'{full} {wb(full)} + {u_part} {uom_name}{x_hint}'
 
+    def _nakel_move_demand_qty(self, move):
+        """Demanda OV del move (misma lógica que nakel_report_picking en PICK)."""
+        if not move:
+            return 0.0
+        sale_line = getattr(move, 'sale_line_id', False) or False
+        if sale_line:
+            return float(sale_line.product_uom_qty or 0.0)
+        return float(move.product_uom_qty or 0.0)
+
     def _get_consolidated_lines(self):
         """
         Consolidates move lines from all pickings in the batch.
@@ -500,6 +509,8 @@ class StockPickingBatch(models.Model):
             'location_dest': None,
             'location_dest_name': '',
             'quantity': 0.0,
+            'demand_qty': 0.0,
+            'move_demand_seen': set(),
             'uom': None,
             'uom_name': '',
             'picking_ids': [],
@@ -519,6 +530,7 @@ class StockPickingBatch(models.Model):
                     # Build pseudo move_line from move (no lot/package info until operations exist)
                     pseudo = type('PseudoMoveLine', (), {
                         'product_id': move.product_id,
+                        'move_id': move,
                         'lot_id': None,
                         'package_id': None,
                         'result_package_id': None,
@@ -652,6 +664,12 @@ class StockPickingBatch(models.Model):
                 # Accumulate quantity
                 consolidated[key]['quantity'] += move_line.quantity
 
+                move = getattr(move_line, 'move_id', False) or False
+                move_id = move.id if move else False
+                if move_id and move_id not in consolidated[key]['move_demand_seen']:
+                    consolidated[key]['move_demand_seen'].add(move_id)
+                    consolidated[key]['demand_qty'] += self._nakel_move_demand_qty(move)
+
                 # Track which pickings contributed to this line
                 if picking.id not in consolidated[key]['picking_ids']:
                     consolidated[key]['picking_ids'].append(picking.id)
@@ -669,6 +687,8 @@ class StockPickingBatch(models.Model):
             )
         )
         for line in result:
+            line.pop('move_demand_seen', None)
+            line.setdefault('demand_qty', 0.0)
             line.setdefault('bulto_name', '')
             line.setdefault('bulto_qty', 0.0)
             line.setdefault('units_per_bulto', 0.0)
@@ -679,10 +699,10 @@ class StockPickingBatch(models.Model):
                 line['product_plu'] = (
                     (getattr(p, 'barcode', None) or '').strip() or (p.default_code or '').strip()
                 )
-            # Calcular cuántos bultos representa la cantidad (para el recolector)
-            qty = line.get('quantity', 0)
+            # Calcular cuántos bultos representa la demanda OV (para el recolector)
+            qty = line.get('demand_qty', 0)
             if line.get('qty_already_in_bultos'):
-                line['bulto_qty'] = round(qty, 2)  # quantity ya está en bultos
+                line['bulto_qty'] = round(qty, 2)  # demanda ya está en bultos
             else:
                 units_per_bulto = line.get('units_per_bulto') or 0
                 if units_per_bulto > 0 and qty > 0:
@@ -690,7 +710,7 @@ class StockPickingBatch(models.Model):
                 else:
                     line['bulto_qty'] = 0.0
             td = self._format_total_display_for_line(line)
-            qty = float(line.get('quantity') or 0)
+            qty = float(line.get('demand_qty') or 0)
             if qty > 0 and td == '-':
                 td = f'{self._pretty_qty_for_display(qty)} {line.get("uom_name") or "unidades"}'
             line['total_display'] = td

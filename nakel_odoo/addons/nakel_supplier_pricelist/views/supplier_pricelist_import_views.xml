@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         SEARCH VIEW
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="view_supplier_pricelist_import_search" model="ir.ui.view">
+        <field name="name">supplier.pricelist.import.search</field>
+        <field name="model">supplier.pricelist.import</field>
+        <field name="arch" type="xml">
+            <search string="Buscar listas de precios">
+                <field name="name" string="Referencia"/>
+                <field name="partner_id" string="Proveedor"/>
+                <separator/>
+                <!-- Filtros por estado -->
+                <filter name="draft"      string="Borradores"
+                        domain="[('state', '=', 'draft')]"/>
+                <filter name="review"     string="En revisión"
+                        domain="[('state', '=', 'review')]"/>
+                <filter name="done"       string="Aplicadas"
+                        domain="[('state', '=', 'done')]"/>
+                <filter name="cancelled"  string="Canceladas"
+                        domain="[('state', '=', 'cancelled')]"/>
+                <separator/>
+                <!-- Filtros por período -->
+                <filter name="this_month" string="Este mes"
+                        domain="[('date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="has_unmatched" string="Con productos sin match"
+                        domain="[('unmatched', '&gt;', 0)]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_partner" string="Proveedor"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_state" string="Estado"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_date" string="Mes"
+                            context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         LIST VIEW
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="view_supplier_pricelist_import_list" model="ir.ui.view">
+        <field name="name">supplier.pricelist.import.list</field>
+        <field name="model">supplier.pricelist.import</field>
+        <field name="arch" type="xml">
+            <list string="Listas de Precios de Proveedores"
+                  decoration-info="state == 'draft'"
+                  decoration-warning="state in ('processing', 'review')"
+                  decoration-success="state == 'done'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="date"/>
+                <field name="file_name" optional="hide"/>
+                <field name="total_lines"    string="Total"/>
+                <field name="matched_auto"   string="Auto" optional="show"/>
+                <field name="matched_review" string="Revisión" optional="show"/>
+                <field name="unmatched"      string="Sin match" optional="show"/>
+                <field name="applied_lines"  string="Aplicados" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-warning="state in ('processing', 'review')"
+                       decoration-success="state == 'done'"
+                       decoration-danger="state == 'cancelled'"/>
+            </list>
+        </field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         KANBAN VIEW
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="view_supplier_pricelist_import_kanban" model="ir.ui.view">
+        <field name="name">supplier.pricelist.import.kanban</field>
+        <field name="model">supplier.pricelist.import</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state"
+                    class="o_kanban_small_column"
+                    quick_create="false">
+
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="date"/>
+                <field name="state"/>
+                <field name="total_lines"/>
+                <field name="matched_auto"/>
+                <field name="matched_review"/>
+                <field name="unmatched"/>
+                <field name="applied_lines"/>
+                <field name="file_name"/>
+
+                <templates>
+                    <t t-name="card">
+                        <!-- Encabezado de la tarjeta -->
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong class="o_kanban_record_title fs-6">
+                                <field name="name"/>
+                            </strong>
+                            <field name="state" widget="badge"
+                                   decoration-info="state == 'draft'"
+                                   decoration-warning="state in ('processing', 'review')"
+                                   decoration-success="state == 'done'"
+                                   decoration-danger="state == 'cancelled'"/>
+                        </div>
+
+                        <!-- Proveedor y fecha -->
+                        <div class="o_kanban_record_subtitle text-muted mb-2">
+                            <i class="fa fa-building-o me-1"/>
+                            <field name="partner_id"/>
+                            <span class="ms-2">
+                                <i class="fa fa-calendar me-1"/>
+                                <field name="date"/>
+                            </span>
+                        </div>
+
+                        <!-- Archivo -->
+                        <div class="text-muted small mb-3"
+                             t-if="record.file_name.raw_value">
+                            <i class="fa fa-file me-1"/>
+                            <field name="file_name"/>
+                        </div>
+
+                        <!-- Barra de progreso de matches -->
+                        <div t-if="record.total_lines.raw_value > 0" class="mb-2">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>
+                                    <field name="total_lines"/>
+                                    productos
+                                </span>
+                                <span>
+                                    <field name="applied_lines"/>
+                                    aplicados
+                                </span>
+                            </div>
+
+                            <!-- Mini stats row -->
+                            <div class="d-flex gap-2 small">
+                                <span class="badge text-bg-success" title="Match automático">
+                                    <i class="fa fa-check me-1"/>
+                                    <field name="matched_auto"/>
+                                </span>
+                                <span class="badge text-bg-warning" title="Requieren revisión">
+                                    <i class="fa fa-clock-o me-1"/>
+                                    <field name="matched_review"/>
+                                </span>
+                                <span class="badge text-bg-danger" title="Sin match">
+                                    <i class="fa fa-times me-1"/>
+                                    <field name="unmatched"/>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Footer con botón de acción rápida -->
+                        <div class="o_kanban_record_bottom mt-2">
+                            <div class="oe_kanban_bottom_left"/>
+                            <div class="oe_kanban_bottom_right">
+                                <button t-if="record.state.raw_value == 'draft'"
+                                        name="action_process_ai"
+                                        type="object"
+                                        class="btn btn-sm btn-primary">
+                                    <i class="fa fa-magic me-1"/>Procesar IA
+                                </button>
+                                <button t-if="record.state.raw_value == 'review'"
+                                        name="action_apply_confirmed"
+                                        type="object"
+                                        class="btn btn-sm btn-success">
+                                    <i class="fa fa-check me-1"/>Aplicar
+                                </button>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         FORM VIEW
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="view_supplier_pricelist_import_form" model="ir.ui.view">
+        <field name="name">supplier.pricelist.import.form</field>
+        <field name="model">supplier.pricelist.import</field>
+        <field name="arch" type="xml">
+            <form string="Importación de Lista de Precios">
+
+                <!-- ── Header con botones y statusbar ──────────────────────── -->
+                <header>
+                    <button name="action_process_ai"
+                            string="Procesar con IA"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state not in ('draft',)"
+                            confirm="¿Enviar el archivo al servicio IA para matching automático?"/>
+                    <button name="action_apply_confirmed"
+                            string="Aplicar costos confirmados"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'review' or has_blocking_warnings"/>
+                    <button name="action_apply_confirmed"
+                            string="Aplicar costos (bloqueado por avisos)"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'review' or not has_blocking_warnings"
+                            disabled="1"
+                            title="Hay avisos críticos sin reconocer. Revisá la pestaña Avisos."/>
+                    <button name="action_reanalyze_warnings"
+                            string="Re-analizar avisos"
+                            type="object"
+                            invisible="state not in ('review', 'done')"/>
+                    <button name="action_cancel"
+                            string="Cancelar"
+                            type="object"
+                            invisible="state in ('done', 'cancelled')"/>
+                    <button name="action_reset_draft"
+                            string="Reiniciar"
+                            type="object"
+                            invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,review,done"/>
+                </header>
+
+                <sheet>
+
+                    <!-- ── Stat buttons ─────────────────────────────────────── -->
+                    <div class="oe_button_box" name="button_box"
+                         invisible="state == 'draft'">
+
+                        <!-- Match automático -->
+                        <button name="action_view_auto"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-check-circle text-success"
+                                invisible="matched_auto == 0">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="matched_auto"/>
+                                </span>
+                                <span class="o_stat_text">Auto</span>
+                            </div>
+                        </button>
+
+                        <!-- Requieren revisión -->
+                        <button name="action_view_review"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-exclamation-circle text-warning"
+                                invisible="matched_review == 0">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="matched_review"/>
+                                </span>
+                                <span class="o_stat_text">Revisión</span>
+                            </div>
+                        </button>
+
+                        <!-- Sin match -->
+                        <button name="action_view_no_match"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-times-circle text-danger"
+                                invisible="unmatched == 0">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="unmatched"/>
+                                </span>
+                                <span class="o_stat_text">Sin match</span>
+                            </div>
+                        </button>
+
+                        <!-- Costos aplicados -->
+                        <button name="action_view_applied"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-dollar text-primary"
+                                invisible="applied_lines == 0">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="applied_lines"/>
+                                </span>
+                                <span class="o_stat_text">Aplicados</span>
+                            </div>
+                        </button>
+
+                        <!-- Avisos -->
+                        <button name="action_view_warnings"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-exclamation-triangle text-warning"
+                                invisible="warning_count == 0">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="warning_count"/>
+                                </span>
+                                <span class="o_stat_text">Avisos</span>
+                            </div>
+                        </button>
+
+                    </div>
+
+                    <!-- ── Cabecera del documento ────────────────────────────── -->
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="name" placeholder="Ej: Cachafaz Dic 2025"
+                                   class="o_field_widget"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Datos de la lista">
+                            <field name="partner_id"
+                                   options="{'no_create': True}"
+                                   placeholder="Seleccioná el proveedor..."/>
+                            <field name="date"/>
+                        </group>
+                        <group string="Archivo">
+                            <field name="file"
+                                   widget="binary"
+                                   filename="file_name"
+                                   invisible="state != 'draft'"
+                                   required="state == 'draft'"/>
+                            <field name="file" widget="binary"
+                                   filename="file_name"
+                                   invisible="state == 'draft'"
+                                   readonly="1"/>
+                            <field name="file_name" invisible="1"/>
+                            <field name="file_type" invisible="state == 'draft'"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+
+                    <field name="notes"
+                           placeholder="Notas opcionales sobre esta lista (vigencia, condiciones, descuentos especiales...)"/>
+
+                    <!-- ── Alerta de estado processing ───────────────────────── -->
+                    <div class="alert alert-info d-flex align-items-center gap-2"
+                         role="alert"
+                         invisible="state != 'processing'">
+                        <i class="fa fa-spinner fa-spin fa-2x"/>
+                        <div>
+                            <strong>Procesando con IA...</strong><br/>
+                            El servicio está analizando el archivo y buscando matches.
+                            Actualizá la página en unos segundos.
+                        </div>
+                    </div>
+
+                    <!-- ── Banner de avisos críticos ─────────────────────────── -->
+                    <div class="alert alert-danger"
+                         role="alert"
+                         invisible="not has_blocking_warnings">
+                        <h4 class="alert-heading">
+                            <i class="fa fa-exclamation-triangle me-2"/>
+                            Hay <field name="unacknowledged_critical_count" class="oe_inline"/>
+                            aviso(s) crítico(s) sin reconocer
+                        </h4>
+                        <p class="mb-2">
+                            La aplicación de costos está <strong>bloqueada</strong> hasta que revises
+                            los avisos. Posibles causas: el formato del archivo cambió,
+                            o un porcentaje alto de precios cambió respecto a la lista anterior.
+                        </p>
+                        <button name="action_view_warnings" type="object"
+                                class="btn btn-danger btn-sm">
+                            <i class="fa fa-list me-1"/>Ver avisos
+                        </button>
+                    </div>
+
+                    <!-- ── Banner de avisos no críticos ──────────────────────── -->
+                    <div class="alert alert-warning"
+                         role="alert"
+                         invisible="has_blocking_warnings or warning_count == 0">
+                        <i class="fa fa-info-circle me-1"/>
+                        <field name="warning_count" class="oe_inline"/> aviso(s) detectado(s).
+                        <button name="action_view_warnings" type="object"
+                                class="btn btn-link btn-sm p-0 ms-1">
+                            Ver detalle
+                        </button>
+                    </div>
+
+                    <!-- ── Resumen visual (visible solo cuando hay líneas) ────── -->
+                    <div class="row g-3 mb-3"
+                         invisible="state == 'draft' or total_lines == 0">
+                        <div class="col-12">
+                            <div class="o_kanban_view bg-light rounded p-3">
+                                <div class="d-flex justify-content-around text-center">
+                                    <div>
+                                        <div class="fs-4 fw-bold text-success">
+                                            <field name="matched_auto"/>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fa fa-check-circle me-1 text-success"/>
+                                            Match automático
+                                        </small>
+                                    </div>
+                                    <div class="border-start"/>
+                                    <div>
+                                        <div class="fs-4 fw-bold text-warning">
+                                            <field name="matched_review"/>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fa fa-clock-o me-1 text-warning"/>
+                                            Requieren revisión
+                                        </small>
+                                    </div>
+                                    <div class="border-start"/>
+                                    <div>
+                                        <div class="fs-4 fw-bold text-danger">
+                                            <field name="unmatched"/>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fa fa-times-circle me-1 text-danger"/>
+                                            Sin match
+                                        </small>
+                                    </div>
+                                    <div class="border-start"/>
+                                    <div>
+                                        <div class="fs-4 fw-bold text-primary">
+                                            <field name="applied_lines"/>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fa fa-check me-1 text-primary"/>
+                                            Costos aplicados
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Notebook de líneas ─────────────────────────────────── -->
+                    <notebook invisible="state == 'draft'">
+
+                        <!-- ── Tab: Matches automáticos ──────────────────────── -->
+                        <page string="✅ Automáticos" name="tab_auto"
+                              invisible="matched_auto == 0">
+                            <field name="line_ids"
+                                   domain="[('match_status', '=', 'auto')]"
+                                   context="{'default_match_status': 'auto'}">
+                                <list editable="bottom"
+                                      decoration-success="match_status == 'auto'"
+                                      optional="show">
+                                    <field name="supplier_product_name" readonly="1"/>
+                                    <field name="supplier_presentation"
+                                           readonly="1" optional="hide"/>
+                                    <field name="price_with_vat"
+                                           string="c/IVA" readonly="1"/>
+                                    <field name="price_without_vat"
+                                           string="Costo neto" readonly="1"/>
+                                    <field name="product_tmpl_id" string="Producto Odoo"/>
+                                    <field name="current_cost"
+                                           string="Precio anterior proveedor" readonly="1"/>
+                                    <field name="cost_delta_display"
+                                           string="Δ%" readonly="1"
+                                           decoration-danger="delta_color == 'danger'"
+                                           decoration-warning="delta_color == 'warning'"
+                                           decoration-success="delta_color == 'success'"
+                                           decoration-muted="delta_color == 'muted'"/>
+                                    <field name="delta_color" column_invisible="1"/>
+                                    <field name="has_comparable_cost" column_invisible="1"/>
+                                    <field name="confidence_score"
+                                           string="Conf. %" readonly="1"/>
+                                    <field name="match_notes"
+                                           readonly="1" optional="hide"/>
+                                    <field name="applied" readonly="1"
+                                           string="✓"/>
+                                    <field name="match_status" column_invisible="1"/>
+                                    <button name="action_reject" type="object"
+                                            icon="fa-times" title="Rechazar match"
+                                            class="text-danger"
+                                            invisible="applied"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- ── Tab: Requieren revisión ───────────────────────── -->
+                        <page string="⚠️ Revisión" name="tab_review"
+                              invisible="matched_review == 0">
+                            <div class="alert alert-warning py-2 px-3 mb-2" role="alert">
+                                <i class="fa fa-info-circle me-1"/>
+                                Verificá cada match y confirmalo o asignalo manualmente.
+                                Hacé clic en <strong>✓</strong> para confirmar.
+                            </div>
+                            <field name="line_ids"
+                                   domain="[('match_status', '=', 'review')]">
+                                <list editable="bottom"
+                                      decoration-warning="match_status == 'review'">
+                                    <field name="supplier_product_name" readonly="1"/>
+                                    <field name="supplier_presentation"
+                                           readonly="1" optional="hide"/>
+                                    <field name="price_with_vat"
+                                           string="c/IVA" readonly="1"/>
+                                    <field name="price_without_vat"
+                                           string="Costo neto" readonly="1"/>
+                                    <field name="product_tmpl_id"
+                                           string="Producto Odoo"
+                                           options="{'no_create': True}"/>
+                                    <field name="current_cost"
+                                           string="Precio anterior proveedor" readonly="1"/>
+                                    <field name="cost_delta_display"
+                                           string="Δ%" readonly="1"
+                                           decoration-danger="delta_color == 'danger'"
+                                           decoration-warning="delta_color == 'warning'"
+                                           decoration-success="delta_color == 'success'"
+                                           decoration-muted="delta_color == 'muted'"/>
+                                    <field name="delta_color" column_invisible="1"/>
+                                    <field name="has_comparable_cost" column_invisible="1"/>
+                                    <field name="confidence_score"
+                                           string="Conf. %" readonly="1"/>
+                                    <field name="match_notes"
+                                           readonly="1" optional="hide"/>
+                                    <field name="match_status" column_invisible="1"/>
+                                    <button name="action_confirm_match" type="object"
+                                            icon="fa-check"
+                                            title="Confirmar este match"
+                                            class="text-success"
+                                            invisible="not product_tmpl_id"/>
+                                    <button name="action_reject" type="object"
+                                            icon="fa-times"
+                                            title="Rechazar (no actualizar costo)"
+                                            class="text-danger"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- ── Tab: Sin match ────────────────────────────────── -->
+                        <page string="❌ Sin match" name="tab_no_match"
+                              invisible="unmatched == 0">
+                            <div class="alert alert-danger py-2 px-3 mb-2" role="alert">
+                                <i class="fa fa-search me-1"/>
+                                Buscá manualmente el producto de Odoo y hacé clic en
+                                <strong>✓</strong> para asignarlo.
+                            </div>
+                            <field name="line_ids"
+                                   domain="[('match_status', '=', 'no_match')]">
+                                <list editable="bottom"
+                                      decoration-danger="match_status == 'no_match'">
+                                    <field name="supplier_product_name" readonly="1"/>
+                                    <field name="supplier_presentation" readonly="1"/>
+                                    <field name="price_with_vat"
+                                           string="c/IVA" readonly="1"/>
+                                    <field name="price_without_vat"
+                                           string="Costo neto" readonly="1"/>
+                                    <field name="product_tmpl_id"
+                                           string="Producto Odoo"
+                                           options="{'no_create': True}"
+                                           placeholder="Buscá el producto..."/>
+                                    <field name="match_notes"
+                                           readonly="1" optional="hide"/>
+                                    <field name="match_status" column_invisible="1"/>
+                                    <button name="action_confirm_match" type="object"
+                                            icon="fa-check"
+                                            title="Confirmar asignación"
+                                            class="text-success"
+                                            invisible="not product_tmpl_id"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- ── Tab: Rechazados ───────────────────────────────── -->
+                        <page string="🚫 Rechazados" name="tab_rejected"
+                              invisible="1">
+                            <field name="line_ids"
+                                   domain="[('match_status', '=', 'rejected')]">
+                                <list>
+                                    <field name="supplier_product_name"/>
+                                    <field name="price_with_vat"/>
+                                    <field name="match_notes"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- ── Tab: Avisos ───────────────────────────────────── -->
+                        <page string="⚠ Avisos" name="tab_warnings"
+                              invisible="warning_count == 0">
+                            <field name="warning_ids">
+                                <list decoration-danger="severity == 'critical' and not acknowledged"
+                                       decoration-warning="severity == 'warning' and not acknowledged"
+                                       decoration-muted="acknowledged">
+                                    <field name="severity" widget="badge"
+                                           decoration-danger="severity == 'critical'"
+                                           decoration-warning="severity == 'warning'"
+                                           decoration-info="severity == 'info'"/>
+                                    <field name="type"/>
+                                    <field name="title"/>
+                                    <field name="message" widget="text" optional="show"/>
+                                    <field name="acknowledged" widget="boolean_toggle"/>
+                                    <button name="action_acknowledge" type="object"
+                                            string="Reconocer"
+                                            icon="fa-check"
+                                            class="text-success"
+                                            invisible="acknowledged"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- ── Tab: Diagnóstico (debug) ──────────────────────── -->
+                        <page string="🔧 Diagnóstico" name="tab_diagnostics"
+                              groups="purchase.group_purchase_manager">
+                            <group>
+                                <group string="Análisis de anomalías">
+                                    <field name="comparable_line_count" readonly="1"/>
+                                    <field name="anomaly_line_count" readonly="1"/>
+                                    <field name="anomaly_pct" readonly="1"/>
+                                </group>
+                                <group string="Formato del archivo">
+                                    <field name="column_signature" readonly="1"/>
+                                    <field name="column_mapping_id" readonly="1"/>
+                                    <field name="detected_columns_json" readonly="1"
+                                           widget="text"/>
+                                </group>
+                            </group>
+                        </page>
+
+                    </notebook>
+
+                    <!-- Campos ocultos necesarios para selectores visuales -->
+                    <field name="has_blocking_warnings" invisible="1"/>
+                    <field name="unacknowledged_critical_count" invisible="1"/>
+                    <field name="critical_warning_count" invisible="1"/>
+                    <field name="warning_count" invisible="1"/>
+
+                </sheet>
+
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ACTION
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="action_supplier_pricelist_import" model="ir.actions.act_window">
+        <field name="name">Listas de Precios de Proveedores</field>
+        <field name="res_model">supplier.pricelist.import</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="context">{'search_default_review': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Importar una nueva lista de precios
+            </p>
+            <p>
+                Subí el PDF o Excel del proveedor y el agente IA
+                cruza automáticamente los productos con el catálogo de Odoo.
+            </p>
+        </field>
+    </record>
+
+</odoo>

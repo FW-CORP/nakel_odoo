@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_stock_picking_batch_form_nakel_demand_mode" model="ir.ui.view">
+        <field name="name">stock.picking.batch.form.nakel.demand.mode</field>
+        <field name="model">stock.picking.batch</field>
+        <field name="inherit_id" ref="stock_picking_batch.stock_picking_batch_form"/>
+        <field name="priority" eval="37"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <field name="nakel_demand_coverage_status" invisible="1"/>
+                <field name="nakel_demand_gap_count" invisible="1"/>
+                <field name="nakel_demand_mode_enabled" invisible="1"/>
+                <field name="nakel_wave_barcode_blocked" invisible="1"/>
+                <field name="nakel_wave_barcode_block_caption" invisible="1"/>
+                <button
+                    name="action_nakel_show_barcode_blockers"
+                    type="object"
+                    class="oe_stat_button text-bg-danger"
+                    icon="fa-ban"
+                    invisible="not nakel_demand_mode_enabled or not is_wave or not nakel_wave_barcode_blocked"
+                    title="Hay condiciones peligrosas para abrir o validar Barcode."
+                >
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Barcode bloqueado</span>
+                        <field name="nakel_wave_barcode_block_caption" class="o_stat_value" readonly="1"/>
+                    </div>
+                </button>
+                <button
+                    name="action_nakel_open_demand_coverage"
+                    type="object"
+                    class="oe_stat_button text-bg-success"
+                    icon="fa-check-circle"
+                    invisible="not nakel_demand_mode_enabled or not is_wave or nakel_wave_barcode_blocked or nakel_demand_coverage_status != 'ok'"
+                    title="Reserva y pedido OV coinciden. No hace falta modo demanda antes de Barcode."
+                >
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Demanda OV</span>
+                        <span class="o_stat_value">OK</span>
+                    </div>
+                </button>
+                <button
+                    name="action_nakel_apply_demand_mode"
+                    type="object"
+                    class="oe_stat_button text-bg-warning"
+                    icon="fa-exclamation-triangle"
+                    invisible="not nakel_demand_mode_enabled or not is_wave or nakel_wave_barcode_blocked or nakel_demand_coverage_status != 'needed'"
+                    confirm="¿Ajustar las cantidades PICK al pedido del cliente? Usar solo si el semáforo lo indica (reserva incompleta)."
+                    title="Hay productos con reserva menor al pedido o PICK hermanos fuera de la ola. Tocá para ajustar antes de Barcode."
+                >
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Modo demanda</span>
+                        <field name="nakel_demand_gap_caption" class="o_stat_value" readonly="1"/>
+                    </div>
+                </button>
+                <button
+                    name="action_nakel_open_coverage_gaps"
+                    type="object"
+                    class="oe_stat_button text-bg-danger"
+                    icon="fa-times-circle"
+                    invisible="not nakel_demand_mode_enabled or not is_wave or nakel_demand_coverage_status != 'missing'"
+                    title="Productos del pedido que no están en la ola. Tocá para ver la lista. Pickear en Barcode no corrige esto."
+                >
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Cobertura OV</span>
+                        <field name="nakel_demand_gap_caption" class="o_stat_value" readonly="1"/>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//header//button[@name='action_done']" position="before">
+                <button
+                    name="action_nakel_show_barcode_blockers"
+                    type="object"
+                    string="Revisar bloqueo Barcode"
+                    class="btn-outline-danger"
+                    groups="stock.group_stock_user"
+                    invisible="not nakel_demand_mode_enabled or not is_wave or not nakel_wave_barcode_blocked"
+                />
+                <button
+                    name="action_nakel_open_coverage_gaps"
+                    type="object"
+                    string="Ver faltantes"
+                    class="btn-outline-danger"
+                    groups="stock.group_stock_user"
+                    invisible="not nakel_demand_mode_enabled or not is_wave or nakel_demand_coverage_status != 'missing'"
+                />
+                <button
+                    name="action_nakel_apply_demand_mode"
+                    type="object"
+                    string="Modo demanda OV"
+                    class="btn-warning"
+                    groups="stock.group_stock_user"
+                    invisible="not nakel_demand_mode_enabled or not is_wave or nakel_demand_coverage_status != 'needed'"
+                    confirm="¿Ajustar las cantidades PICK al pedido del cliente? Usar solo si el semáforo lo indica (reserva incompleta)."
+                    title="Sube las cantidades al pedido OV cuando Odoo reservó menos de lo pedido. Si el semáforo está verde, no hace falta."
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>

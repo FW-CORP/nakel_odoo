@@ -61,7 +61,7 @@ PAPERFORMAT_FACTURA = {
     "format": "A4",
     "orientation": "Portrait",
     "margin_top": 5,
-    "margin_bottom": 20,
+    "margin_bottom": 14,
     "margin_left": 6,
     "margin_right": 6,
     "header_line": False,

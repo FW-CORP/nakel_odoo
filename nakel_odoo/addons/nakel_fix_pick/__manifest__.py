@@ -2,7 +2,7 @@
 {
     "name": "Nakel Fix Picked Flag",
     "summary": "Keep stock.move.line.picked consistent with quantity for Barcode waves.",
-    "version": "18.0.1.1.4",
+    "version": "18.0.1.1.7",
     "category": "Inventory/Inventory",
     "author": "Nakel",
     "license": "LGPL-3",

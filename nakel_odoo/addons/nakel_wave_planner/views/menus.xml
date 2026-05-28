@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <menuitem
+      id="menu_nakel_wave_planner"
+      name="Armar ola por zona"
+      parent="stock_picking_batch.stock_picking_wave_menu"
+      action="action_nakel_wave_planner_wizard"
+      sequence="5"
+      groups="stock.group_stock_user"
+  />
+</odoo>

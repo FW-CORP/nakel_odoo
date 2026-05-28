@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_nakel_wave_coverage_gap_wizard_user,nakel.wave.coverage.gap.wizard user,model_nakel_wave_coverage_gap_wizard,stock.group_stock_user,1,1,1,1
+access_nakel_wave_coverage_gap_line_user,nakel.wave.coverage.gap.line user,model_nakel_wave_coverage_gap_line,stock.group_stock_user,1,1,1,1

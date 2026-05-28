@@ -6,7 +6,8 @@ Perfiles documentados en MOVER_DISPONIBLE_PEDIDOS_A_ROTURAS2_MASTER_DEV.md:
 - CEN (default): cotizaciones NAK, stock CEN/Existencias → CEN/Roturas 2 en Nakel SA.
 - B3: cotizaciones Nakel SA (Belgrano 3), stock B3/Existencias → B3/Roturas 2.
 
-Política: mueve min(pedido, disponible) por producto en el origen del perfil.
+Política por defecto: mueve min(pedido, disponible) por producto en el origen del perfil.
+Con --mover-demanda-completa: mueve todo lo pedido (puede dejar negativo el origen).
 
 Por defecto solo cotizaciones con crm.tag **procesar**. Tras --apply se quita procesar y
 se agrega **ProcesadaNN**, incluso si no hubo stock que mover (evita reprocesar por error).
@@ -40,8 +41,19 @@ def _chunked(ids: List[int], size: int) -> Iterable[List[int]]:
         yield ids[i : i + size]
 
 
-def _sum_quant_qty(models, db: int, uid: int, password: str, location_id: int, product_id: int) -> float:
-    dom = [("location_id", "=", location_id), ("product_id", "=", product_id), ("quantity", ">", 0)]
+def _sum_quant_qty(
+    models,
+    db: int,
+    uid: int,
+    password: str,
+    location_id: int,
+    product_id: int,
+    *,
+    positive_only: bool = True,
+) -> float:
+    dom: List[tuple] = [("location_id", "=", location_id), ("product_id", "=", product_id)]
+    if positive_only:
+        dom.append(("quantity", ">", 0))
     qids = models.execute_kw(db, uid, password, "stock.quant", "search", [dom])
     if not qids:
         return 0.0
@@ -207,14 +219,17 @@ def _ensure_move_lines_for_unreserved_moves(
     uid: int,
     password: str,
     picking_id: int,
+    *,
+    demanda_completa: bool = False,
 ) -> int:
     """
     Si algún stock.move tiene demanda > 0 pero sin líneas de detalle (Odoo no reservó),
     crea una stock.move.line con qty_done = demanda para poder validar.
-    Devuelve cantidad de líneas creadas.
+    Con demanda_completa=True también fuerza qty_done al total pedido si la reserva quedó parcial.
+    Devuelve cantidad de líneas creadas o ajustadas.
     """
     p = models.execute_kw(db, uid, password, "stock.picking", "read", [[picking_id]], {"fields": ["move_ids"]})[0]
-    created = 0
+    touched = 0
     for mid in p.get("move_ids") or []:
         mv = models.execute_kw(
             db,
@@ -239,8 +254,6 @@ def _ensure_move_lines_for_unreserved_moves(
         qty_need = float(mv.get("product_uom_qty") or 0.0)
         if qty_need <= 0:
             continue
-        if mv.get("move_line_ids"):
-            continue
         loc_src = mv["location_id"][0]
         loc_dst = mv["location_dest_id"][0]
         prod_id = mv["product_id"][0]
@@ -248,6 +261,35 @@ def _ensure_move_lines_for_unreserved_moves(
         if not uom_id:
             pr = models.execute_kw(db, uid, password, "product.product", "read", [[prod_id]], {"fields": ["uom_id"]})[0]
             uom_id = pr["uom_id"][0]
+
+        line_ids = mv.get("move_line_ids") or []
+        if line_ids and demanda_completa:
+            lines = models.execute_kw(
+                db,
+                uid,
+                password,
+                "stock.move.line",
+                "read",
+                [line_ids],
+                {"fields": ["qty_done", "quantity", "lot_id", "lot_name"]},
+            )
+            done_total = sum(float(ln.get("qty_done") or ln.get("quantity") or 0.0) for ln in lines)
+            if done_total + 1e-6 < qty_need:
+                if len(lines) == 1 and not (lines[0].get("lot_id") or lines[0].get("lot_name")):
+                    models.execute_kw(
+                        db,
+                        uid,
+                        password,
+                        "stock.move.line",
+                        "write",
+                        [[lines[0]["id"]], {"qty_done": qty_need}],
+                    )
+                    touched += 1
+            continue
+
+        if line_ids:
+            continue
+
         models.execute_kw(
             db,
             uid,
@@ -266,8 +308,8 @@ def _ensure_move_lines_for_unreserved_moves(
                 }
             ],
         )
-        created += 1
-    return created
+        touched += 1
+    return touched
 
 
 def _finalize_pickings_same_origin(
@@ -278,6 +320,7 @@ def _finalize_pickings_same_origin(
     *,
     origin: str,
     company_id: int,
+    demanda_completa: bool = False,
 ) -> None:
     """
     Odoo a veces parte un traslado en varios pickings con el mismo `origin`.
@@ -301,7 +344,9 @@ def _finalize_pickings_same_origin(
             models.execute_kw(db, uid, password, "stock.picking", "action_assign", [[oid]])
         except xmlrpc.client.Fault:
             pass
-        n = _ensure_move_lines_for_unreserved_moves(models, db, uid, password, oid)
+        n = _ensure_move_lines_for_unreserved_moves(
+            models, db, uid, password, oid, demanda_completa=demanda_completa
+        )
         if n:
             print(f"  picking {oid} ({st.get('name')}): creadas {n} línea(s) move_line (sin reserva previa)")
         res = models.execute_kw(
@@ -556,7 +601,13 @@ def main() -> int:
     p.add_argument(
         "--listar-omitidos",
         action="store_true",
-        help="Lista productos de la cotización con pedido>0 pero stock=0 en CEN/Existencias (no se crea movimiento; es esperado).",
+        help="Lista productos de la cotización con pedido>0 pero stock=0 en origen (solo modo min(pedido, disp)).",
+    )
+    p.add_argument(
+        "--mover-demanda-completa",
+        action="store_true",
+        help="Mueve toda la cantidad pedida en la cotización, aunque el origen quede en negativo. "
+        "Roturas 2 refleja la demanda real; el origen absorbe el faltante.",
     )
 
     # Flujo por etiquetas (NAK): "procesar" -> ejecutar -> marcar "ProcesadaNN"
@@ -765,6 +816,10 @@ def main() -> int:
         f"| almacén={wh_code!r} picking_type_id={picking_type_id}"
     )
     print("Modo:", "DRY-RUN" if args.dry_run else "APPLY")
+    print(
+        "Política cantidad:",
+        "demanda completa (puede dejar negativo el origen)" if args.mover_demanda_completa else "min(pedido, disponible)",
+    )
     proc_label = f"id={procesar_tag_id}" if procesar_tag_id else "—"
     skip_label = f"id={skip_tag_id}" if skip_tag_id else (skip_tag_name or "—")
     if args.dry_run:
@@ -787,21 +842,30 @@ def main() -> int:
         moves: List[dict] = []
         moved_lines = 0
         skipped_zero_need = 0
-        sin_stock_en_origen: List[Tuple[int, float, float]] = []  # pid, pedido, disponible
-        movimiento_parcial = 0  # 0 < disp < pedido
+        sin_stock_en_origen: List[Tuple[int, float, float]] = []  # pid, pedido, disp_positivo
+        movimiento_parcial = 0  # 0 < disp < pedido (solo modo min)
+        demanda_sin_stock_positivo = 0  # pedido>0, disp_pos=0, modo demanda completa
+        saldo_negativo_proyectado = 0  # neto - qty < 0 tras mover (modo demanda completa)
 
-        # Por producto: solo se crea línea si hay cantidad > 0 a mover (min(pedido, disp)).
-        # Si disponible en CEN/Existencias es 0, no hay nada que mover → se omite (comportamiento esperado).
         for pid, q_need in sorted(need.items(), key=lambda kv: kv[0]):
             if q_need <= 0:
                 skipped_zero_need += 1
                 continue
-            avail = _sum_quant_qty(models, db, uid, password, src_loc, pid)
-            qty = min(q_need, avail)
-            if avail <= 0 and q_need > 0:
-                sin_stock_en_origen.append((pid, q_need, avail))
-            elif 0 < avail < q_need:
-                movimiento_parcial += 1
+            avail_pos = _sum_quant_qty(models, db, uid, password, src_loc, pid, positive_only=True)
+            net_stock = _sum_quant_qty(models, db, uid, password, src_loc, pid, positive_only=False)
+            if args.mover_demanda_completa:
+                qty = q_need
+            else:
+                qty = min(q_need, avail_pos)
+                if avail_pos <= 0 and q_need > 0:
+                    sin_stock_en_origen.append((pid, q_need, avail_pos))
+                elif 0 < avail_pos < q_need:
+                    movimiento_parcial += 1
+            if args.mover_demanda_completa:
+                if avail_pos <= 0 and q_need > 0:
+                    demanda_sin_stock_positivo += 1
+                if net_stock - qty < -1e-6:
+                    saldo_negativo_proyectado += 1
             if qty <= 0:
                 continue
 
@@ -821,15 +885,47 @@ def main() -> int:
 
         print("Líneas de movimiento a crear (producto con cantidad > 0 a mover):", moved_lines)
         print("Líneas de cotización con pedido<=0 (omitidas):", skipped_zero_need)
-        print(
-            "Productos con pedido>0 pero stock=0 en origen (no se mueve nada; dado por hecho):",
-            len(sin_stock_en_origen),
-        )
-        if movimiento_parcial:
+        if args.mover_demanda_completa:
+            print("Productos con pedido>0 y sin stock positivo en origen (igual se mueve la demanda):", demanda_sin_stock_positivo)
+            print("Productos cuyo saldo neto en origen quedaría negativo tras mover:", saldo_negativo_proyectado)
+        else:
             print(
-                "Productos con movimiento parcial (se mueve min(pedido, disp), queda faltante en cotización):",
-                movimiento_parcial,
+                "Productos con pedido>0 pero stock=0 en origen (no se mueve nada; dado por hecho):",
+                len(sin_stock_en_origen),
             )
+            if movimiento_parcial:
+                print(
+                    "Productos con movimiento parcial (se mueve min(pedido, disp), queda faltante en cotización):",
+                    movimiento_parcial,
+                )
+        if args.listar_omitidos and args.mover_demanda_completa and (demanda_sin_stock_positivo or saldo_negativo_proyectado):
+            detail_pids = sorted(
+                {
+                    pid
+                    for pid, q_need in need.items()
+                    if q_need > 0
+                    and (
+                        _sum_quant_qty(models, db, uid, password, src_loc, pid, positive_only=True) <= 0
+                        or _sum_quant_qty(models, db, uid, password, src_loc, pid, positive_only=False) - q_need < -1e-6
+                    )
+                }
+            )
+            names = {}
+            for part in _chunked(detail_pids, 200):
+                prods = models.execute_kw(db, uid, password, "product.product", "read", [part], {"fields": ["display_name"]})
+                for pr in prods:
+                    names[pr["id"]] = pr.get("display_name") or str(pr["id"])
+            print("  Detalle (demanda completa):")
+            for pid in detail_pids[:80]:
+                q_need = need[pid]
+                avail_pos = _sum_quant_qty(models, db, uid, password, src_loc, pid, positive_only=True)
+                net_stock = _sum_quant_qty(models, db, uid, password, src_loc, pid, positive_only=False)
+                print(
+                    f"    - [{pid}] {names.get(pid, '?')!s} | pedido={q_need} disp+={avail_pos} neto={net_stock} "
+                    f"→ mover={q_need} saldo_proy={net_stock - q_need}"
+                )
+            if len(detail_pids) > 80:
+                print(f"    ... y {len(detail_pids) - 80} más")
         if args.listar_omitidos and sin_stock_en_origen:
             pids = [t[0] for t in sin_stock_en_origen]
             names = {}
@@ -860,7 +956,8 @@ def main() -> int:
                 )
             continue
 
-        origin_str = f"{oname} -> Roturas2 (mover disponible)"
+        origin_suffix = "mover demanda" if args.mover_demanda_completa else "mover disponible"
+        origin_str = f"{oname} -> Roturas2 ({origin_suffix})"
         picking_vals = {
             "picking_type_id": picking_type_id,
             "location_id": src_loc,
@@ -879,6 +976,13 @@ def main() -> int:
             # Algunas bases/configs pueden no exponerlo igual; el validate igual puede pedir cantidades.
             pass
 
+        if args.mover_demanda_completa:
+            n = _ensure_move_lines_for_unreserved_moves(
+                models, db, uid, password, pid_pick, demanda_completa=True
+            )
+            if n:
+                print(f"APPLY: picking {pid_pick}: ajustadas {n} línea(s) move_line para demanda completa")
+
         # Evita wizard stock.backorder.confirmation en traslados internos largos (no crear backorder).
         res = models.execute_kw(
             db,
@@ -896,7 +1000,13 @@ def main() -> int:
             )
 
         _finalize_pickings_same_origin(
-            models, db, uid, password, origin=origin_str, company_id=company_id
+            models,
+            db,
+            uid,
+            password,
+            origin=origin_str,
+            company_id=company_id,
+            demanda_completa=bool(args.mover_demanda_completa),
         )
         print("APPLY: picking principal validado:", pid_pick)
 

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_supplier_pricelist_warning_list" model="ir.ui.view">
+        <field name="name">supplier.pricelist.warning.list</field>
+        <field name="model">supplier.pricelist.warning</field>
+        <field name="arch" type="xml">
+            <list string="Avisos" decoration-danger="severity == 'critical' and not acknowledged"
+                   decoration-warning="severity == 'warning' and not acknowledged"
+                   decoration-muted="acknowledged">
+                <field name="severity" widget="badge"
+                       decoration-danger="severity == 'critical'"
+                       decoration-warning="severity == 'warning'"
+                       decoration-info="severity == 'info'"/>
+                <field name="type"/>
+                <field name="title"/>
+                <field name="partner_id"/>
+                <field name="acknowledged" widget="boolean_toggle"/>
+                <field name="acknowledged_by" optional="hide"/>
+                <field name="acknowledged_date" optional="hide"/>
+                <button name="action_acknowledge" type="object"
+                        string="Marcar reconocido"
+                        icon="fa-check"
+                        invisible="acknowledged"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_supplier_pricelist_warning_form" model="ir.ui.view">
+        <field name="name">supplier.pricelist.warning.form</field>
+        <field name="model">supplier.pricelist.warning</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_acknowledge" type="object"
+                            string="Marcar como reconocido"
+                            class="oe_highlight"
+                            invisible="acknowledged"/>
+                    <field name="severity" widget="statusbar"
+                           statusbar_visible="info,warning,critical"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="title" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="type" readonly="1"/>
+                            <field name="import_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="acknowledged" readonly="1"/>
+                            <field name="acknowledged_by" readonly="1"
+                                   invisible="not acknowledged"/>
+                            <field name="acknowledged_date" readonly="1"
+                                   invisible="not acknowledged"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Detalle">
+                            <field name="message" readonly="1"/>
+                        </page>
+                        <page string="Acción sugerida"
+                              invisible="not suggested_action">
+                            <field name="suggested_action" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo>

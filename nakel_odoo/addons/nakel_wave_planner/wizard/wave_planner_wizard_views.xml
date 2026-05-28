@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="view_nakel_wave_planner_wizard_form" model="ir.ui.view">
+    <field name="name">nakel.wave.planner.wizard.form</field>
+    <field name="model">nakel.wave.planner.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Armar ola por zona">
+        <div class="alert alert-info mb-3" role="status">
+          <strong>Cómo usar:</strong>
+          elegí <em>zona</em> y/o <em>vendedor</em> (podés marcar varios),
+          tocá <strong>Buscar pedidos</strong>, revisá la lista y creá la ola.
+          La fecha es opcional: si no la usan todavía, dejala vacía.
+        </div>
+        <group>
+          <group string="Qué pedidos buscar">
+            <field name="zone_tag_ids" widget="many2many_tags" options="{'no_create': True}"
+                   placeholder="Ej. Zona Norte, ZONA NORTE…"/>
+            <field name="salesperson_ids" widget="many2many_tags" options="{'no_create': True}"
+                   placeholder="Uno o más vendedores"/>
+            <field name="warehouse_id" options="{'no_create': True}"/>
+            <field name="only_without_wave"/>
+          </group>
+          <group string="Fecha (opcional)">
+            <field name="date_planned" placeholder="Dejar vacío = sin filtro por día"/>
+            <field name="date_filter_mode"/>
+          </group>
+          <group string="Al crear la ola">
+            <field name="target_batch_id" options="{'no_create': True}"/>
+            <field name="confirm_wave"/>
+            <field name="apply_demand_mode"/>
+            <field name="summary" readonly="1"/>
+          </group>
+        </group>
+        <div class="oe_button_box mb-2">
+          <button name="action_search_orders" type="object" string="Buscar pedidos" class="btn-primary"/>
+          <button name="action_select_all_ok" type="object" string="Seleccionar OK"/>
+          <button name="action_select_all" type="object" string="Seleccionar todo"/>
+          <button name="action_deselect_all" type="object" string="Quitar selección"/>
+        </div>
+        <field name="line_ids" nolabel="1">
+          <list editable="bottom" create="false" delete="false">
+            <field name="selected" widget="boolean_toggle"/>
+            <field name="warning_level" widget="badge"
+                   decoration-success="warning_level == 'ok'"
+                   decoration-warning="warning_level == 'warn'"
+                   decoration-danger="warning_level == 'blocked'"/>
+            <field name="sale_order_id" readonly="1"/>
+            <field name="partner_id" readonly="1" optional="show"/>
+            <field name="user_id" readonly="1" optional="show"/>
+            <field name="zone_tag_names" readonly="1"/>
+            <field name="picking_count" readonly="1"/>
+            <field name="picking_names" readonly="1"/>
+            <field name="nakel_wave_batch_id" readonly="1" optional="hide"/>
+            <field name="warning_message" readonly="1"/>
+            <field name="commitment_date" readonly="1" optional="hide"/>
+          </list>
+        </field>
+        <footer>
+          <button name="action_create_wave" type="object" string="Crear / agregar a ola WAVE" class="btn-primary"/>
+          <button string="Cancelar" special="cancel"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <record id="action_nakel_wave_planner_wizard" model="ir.actions.act_window">
+    <field name="name">Armar ola por zona</field>
+    <field name="res_model">nakel.wave.planner.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+  </record>
+</odoo>

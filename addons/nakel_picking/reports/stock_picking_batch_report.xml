@@ -229,7 +229,7 @@
                                     <thead style="background-color: #f8f9fa;">
                                         <tr>
                                             <th>Producto</th>
-                                            <th>Cantidad</th>
+                                            <th>Demanda</th>
                                             <th>PLU</th>
                                             <th>TOTAL</th>
                                         </tr>
@@ -267,7 +267,7 @@
                                                         <span t-esc="line['product_name']"/>
                                                     </td>
                                                     <td class="text-center">
-                                                        <strong t-esc="'%.2f' % line['quantity']"/>
+                                                        <strong t-esc="'%.2f' % line.get('demand_qty', 0.0)"/>
                                                         <span t-esc="line['uom_name']"/>
                                                     </td>
                                                     <td class="nakel-consolidated-plu text-center">

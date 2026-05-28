@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <function
+            model="ir.config_parameter"
+            name="nakel_barcode_wave_demand_mode_ensure_default_parameters"
+        />
+    </data>
+</odoo>

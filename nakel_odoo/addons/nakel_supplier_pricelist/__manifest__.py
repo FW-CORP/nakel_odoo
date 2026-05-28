@@ -1,0 +1,30 @@
+{
+    'name': 'Nakel - Importación de Listas de Precios de Proveedores',
+    'version': '18.0.1.4.0',
+    'category': 'Purchase',
+    'summary': 'Importa listas de precios de proveedores con matching IA, '
+               'detecta cambios de formato y anomalías de precios',
+    'author': 'Nakel',
+    'depends': [
+        'base',
+        'base_setup',
+        'mail',
+        'product',
+        'purchase',
+        'stock',
+    ],
+    'data': [
+        'security/ir.model.access.csv',
+        'data/ir_config_parameter.xml',
+        'views/confirm_wizard_views.xml',
+        'views/supplier_pricelist_import_line_views.xml',
+        'views/supplier_pricelist_warning_views.xml',
+        'views/supplier_pricelist_import_views.xml',
+        'views/supplier_product_mapping_views.xml',
+        'views/res_config_settings_views.xml',
+        'views/menus.xml',
+    ],
+    'installable': True,
+    'application': False,
+    'license': 'LGPL-3',
+}
